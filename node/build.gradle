@@ -73,14 +73,14 @@ startScripts.enabled = false
 
 task helloWorldServer(type: CreateStartScripts) {
     mainClassName = 'jp.kusumotolab.kgenprog.grpc.HelloWorldServer'
-    applicationName = 'hello-world-server'
+    applicationName = 'kGenProg-server'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
 task helloWorldClient(type: CreateStartScripts) {
     mainClassName = 'jp.kusumotolab.kgenprog.grpc.HelloWorldClient'
-    applicationName = 'hello-world-client'
+    applicationName = 'kGenProg-client'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
 }
