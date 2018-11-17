@@ -15,6 +15,11 @@ service KGenProgCluster {
    * テストを実行する
    */
   rpc executeTest (ExecuteTestRequest) returns (ExecuteTestResponse) {}
+
+  /*
+   * クラスタからプロジェクトを登録解除する
+   */
+  rpc unregisterProject (UnregisterProjectRequest) returns (UnregisterProjectResponse) {}
 }
 
 message RegisterProjectRequest {
@@ -171,4 +176,18 @@ message Coverage {
    * 各行のStatus
    */
   repeated Status status = 2;
+}
+
+message UnregisterProjectRequest {
+  /*
+   * 登録解除したいプロジェクトID
+   */
+  int32 projectId = 1;
+}
+
+message UnregisterProjectResponse {
+  /*
+   * 通信ステータス
+   */
+  int32 status = 1;
 }
