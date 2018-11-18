@@ -66,7 +66,7 @@ message Gene {
   /*
    * 初期状態からプロジェクトに行う操作の列
    */
-  repeated Base base = 2;
+  repeated Base base = 1;
 }
 
 message Base {
