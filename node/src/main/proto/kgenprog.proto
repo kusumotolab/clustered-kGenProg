@@ -9,24 +9,24 @@ service KGenProgCluster {
   /*
    * クラスタにプロジェクトを登録する
    */
-  rpc registerProject (RegisterProjectRequest) returns (RegisterProjectResponse) {}
+  rpc registerProject (GrpcRegisterProjectRequest) returns (GrpcRegisterProjectResponse) {}
 
   /*
    * テストを実行する
    */
-  rpc executeTest (ExecuteTestRequest) returns (ExecuteTestResponse) {}
+  rpc executeTest (GrpcExecuteTestRequest) returns (GrpcExecuteTestResponse) {}
 
   /*
    * クラスタからプロジェクトを登録解除する
    */
-  rpc unregisterProject (UnregisterProjectRequest) returns (UnregisterProjectResponse) {}
+  rpc unregisterProject (GrpcUnregisterProjectRequest) returns (GrpcUnregisterProjectResponse) {}
 }
 
-message RegisterProjectRequest {
+message GrpcRegisterProjectRequest {
   /*
    * プロジェクトやKGenProgに関する設定
    */
-  Configuration configuration = 1;
+  GrpcConfiguration configuration = 1;
 
   /*
    * プロジェクトをzip圧縮したbyte列
@@ -34,11 +34,40 @@ message RegisterProjectRequest {
   bytes project = 2;
 }
 
-message Configuration {
+message GrpcConfiguration {
+  /*
+   * プロジェクトのルートディレクトリ
+   */
+  string rootDir = 1;
 
+  /*
+   * 製品ソースコードへのパス
+   */
+  repeated string productPaths = 2;
+
+  /*
+   * テストソースコードへのパス
+   */
+  repeated string testPaths = 3;
+
+  /*
+   * クラスパス
+   */
+  repeated string classPaths = 4;
+
+  /*
+   * 実行対象テストケース
+   */
+  repeated string executionTests = 5;
+
+  /*
+   * テストのタイムアウト時間
+   */
+  int32 testTimeLimit = 6;
 }
 
-message RegisterProjectResponse {
+
+message GrpcRegisterProjectResponse {
   /*
    * 通信ステータス
    */
@@ -50,7 +79,7 @@ message RegisterProjectResponse {
   int32 projectId = 2;
 }
 
-message ExecuteTestRequest {
+message GrpcExecuteTestRequest {
   /*
    * 対象プロジェクトID
    */
@@ -59,29 +88,29 @@ message ExecuteTestRequest {
   /*
    * 遺伝子（初期状態からの操作列）
    */
-  Gene gene = 2;
+  GrpcGene gene = 2;
 }
 
-message Gene {
+message GrpcGene {
   /*
    * 初期状態からプロジェクトに行う操作の列
    */
-  repeated Base base = 1;
+  repeated GrpcBase base = 1;
 }
 
-message Base {
+message GrpcBase {
   /*
    * 操作を行う場所
    */
-  ASTLocation location = 1;
+  GrpcASTLocation location = 1;
 
   /*
    * 行う操作
    */
-  Operation operation = 2;
+  GrpcOperation operation = 2;
 }
 
-message ASTLocation {
+message GrpcASTLocation {
   /*
    * 対象ファイルへのパス
    */
@@ -90,10 +119,10 @@ message ASTLocation {
   /*
    * ASTのルートから対象ノードへのパス
    */
-  repeated TreePathElement location = 2;
+  repeated GrpcTreePathElement location = 2;
 }
 
-message TreePathElement {
+message GrpcTreePathElement {
   /*
    * 子ノードの種類ID
    */
@@ -105,7 +134,7 @@ message TreePathElement {
   int32 index = 2;
 }
 
-message Operation {
+message GrpcOperation {
   enum Type {
   	INSERT = 0;
   	DELETE = 1;
@@ -123,7 +152,7 @@ message Operation {
   string statement = 2;
 }
 
-message ExecuteTestResponse {
+message GrpcExecuteTestResponse {
   /*
    * 通信ステータス
    */
@@ -132,17 +161,27 @@ message ExecuteTestResponse {
   /*
    * テスト実行結果
    */
-  TestResults testResults = 2;
+  GrpcTestResults testResults = 2;
 }
 
-message TestResults {
+message GrpcTestResults {
+  /*
+   * テストが失敗し、結果が空かどうか
+   */
+  bool empty = 1;
+
   /*
    * テストメソッドのFQNとその結果のmap
    */
-  map<string, TestResult> value = 1;
+  map<string, GrpcTestResult> value = 2;
+
+  /*
+   * ビルド結果に関する情報
+   */
+  GrpcBuildResults buildResults = 3;
 }
 
-message TestResult {
+message GrpcTestResult {
   /*
    * 実行したテストメソッドのFQN
    */
@@ -156,10 +195,10 @@ message TestResult {
   /*
    * テストによって実行されたクラスとそのCoverageのmap
    */
-  map<string, Coverage> coverage = 3;
+  map<string, GrpcCoverage> coverage = 3;
 }
 
-message Coverage {
+message GrpcCoverage {
   enum Status {
     EMPTY = 0;
     NOT_COVERED = 1;
@@ -178,14 +217,28 @@ message Coverage {
   repeated Status status = 2;
 }
 
-message UnregisterProjectRequest {
+message GrpcBuildResults {
+  /*
+   * ソースパスからそのソースコードに含まれるクラスのFQNへのmap
+   */
+  map<string, GrpcFullyQualifiedNames> sourcePathToFQN = 1;
+}
+
+message GrpcFullyQualifiedNames {
+  /*
+   * FQN
+   */
+  repeated string name = 1;
+}
+
+message GrpcUnregisterProjectRequest {
   /*
    * 登録解除したいプロジェクトID
    */
   int32 projectId = 1;
 }
 
-message UnregisterProjectResponse {
+message GrpcUnregisterProjectResponse {
   /*
    * 通信ステータス
    */
