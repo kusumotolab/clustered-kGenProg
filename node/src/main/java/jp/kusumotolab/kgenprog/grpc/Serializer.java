@@ -34,9 +34,7 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 /**
- * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群
- * serialize: KGenProg -> gRPC
- * deserialize: gRPC -> KGenProg
+ * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 serialize: KGenProg -> gRPC deserialize: gRPC -> KGenProg
  */
 public final class Serializer {
 
@@ -66,6 +64,8 @@ public final class Serializer {
 
     configuration.getExecutedTests()
         .forEach(builder::addExecutionTests);
+
+    builder.setTestTimeLimit((int) configuration.getTestTimeLimitSeconds());
 
     return builder.build();
   }
