@@ -1,5 +1,14 @@
 package jp.kusumotolab.kgenprog.grpc;
 
+import static jp.kusumotolab.kgenprog.project.jdt.ASTNodeAssert.assertThat;
+import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.COVERED;
+import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.EMPTY;
+import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.NOT_COVERED;
+import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO;
+import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST01;
+import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST02;
+import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST03;
+import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST04;
 import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,8 +34,10 @@ import jp.kusumotolab.kgenprog.project.jdt.JDTASTConstruction;
 import jp.kusumotolab.kgenprog.project.jdt.JDTASTLocation;
 import jp.kusumotolab.kgenprog.project.jdt.JDTOperation;
 import jp.kusumotolab.kgenprog.project.jdt.ReplaceOperation;
+import jp.kusumotolab.kgenprog.project.test.EmptyTestResults;
 import jp.kusumotolab.kgenprog.project.test.LocalTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
+import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 import jp.kusumotolab.kgenprog.testutil.ExampleAlias.Src;
 import jp.kusumotolab.kgenprog.testutil.TestUtil;
@@ -66,6 +77,18 @@ public class SerializerTest {
     assertThat(grpcConfig.getExecutionTestsList()).containsExactly("example.FooTest",
         "example.BarTest");
     assertThat(grpcConfig.getTestTimeLimit()).isEqualTo(10);
+
+    // デシリアライズの実行
+    final Configuration deserialized = Serializer.deserialize(grpcConfig);
+    final TargetProject targetProject = deserialized.getTargetProject();
+    assertThat(targetProject.rootPath).isEqualTo(rootDir);
+    assertThat(targetProject.getProductSourcePaths()).extracting(p -> p.path)
+        .containsExactlyElementsOf(productPaths);
+    assertThat(targetProject.getTestSourcePaths()).extracting(p -> p.path)
+        .containsExactlyElementsOf(testPaths);
+    assertThat(deserialized.getExecutedTests()).containsExactly("example.FooTest",
+        "example.BarTest");
+    assertThat(deserialized.getTestTimeLimitSeconds()).isEqualTo(10);
   }
 
   @Test
@@ -155,6 +178,50 @@ public class SerializerTest {
         .getType()).isEqualTo(GrpcOperation.Type.REPLACE);
     assertThat(grpcBase3.getOperation()
         .getStatement()).isEqualTo("return -n;\n");
+
+    // デシリアライズの実行
+    final Gene deserialized = Serializer.deserialize(grpcGene);
+    assertThat(deserialized.getBases()).hasSize(3);
+
+    // delete
+    final Base deserializedBase1 = deserialized.getBases()
+        .get(0);
+    assertThat(deserializedBase1.getTargetLocation()).isInstanceOf(RemoteJDTASTLocation.class);
+    final RemoteJDTASTLocation rlocation1 =
+        (RemoteJDTASTLocation) deserializedBase1.getTargetLocation();
+    assertThat(rlocation1.getSourcePath().path).isEqualTo(location1.getSourcePath().path);
+    assertTreePathElement(rlocation1.getPathToLocation(),
+        new String[] {"types", "bodyDeclarations", "body", "statements"}, new int[] {0, 0, 0, 0});
+
+    assertThat(deserializedBase1.getOperation()).isInstanceOf(DeleteOperation.class);
+
+    // insert
+    final Base deserializedBase2 = deserialized.getBases()
+        .get(1);
+    assertThat(deserializedBase2.getTargetLocation()).isInstanceOf(RemoteJDTASTLocation.class);
+    final RemoteJDTASTLocation rlocation2 =
+        (RemoteJDTASTLocation) deserializedBase2.getTargetLocation();
+    assertThat(rlocation2.getSourcePath().path).isEqualTo(location2.getSourcePath().path);
+    assertTreePathElement(rlocation2.getPathToLocation(),
+        new String[] {"types", "bodyDeclarations", "body", "statements"}, new int[] {0, 0, 0, 1});
+
+    assertThat(deserializedBase2.getOperation()).isInstanceOf(InsertOperation.class);
+    assertThat(((InsertOperation) deserializedBase2.getOperation()).getNode())
+        .isSameSourceCodeAs(statements.get(6));
+
+    // Replace
+    final Base deserializedBase3 = deserialized.getBases()
+        .get(2);
+    assertThat(deserializedBase3.getTargetLocation()).isInstanceOf(RemoteJDTASTLocation.class);
+    final RemoteJDTASTLocation rlocation3 =
+        (RemoteJDTASTLocation) deserializedBase3.getTargetLocation();
+    assertThat(rlocation3.getSourcePath().path).isEqualTo(location3.getSourcePath().path);
+    assertTreePathElement(rlocation3.getPathToLocation(), new String[] {"types", "bodyDeclarations",
+        "body", "statements", "thenStatement", "statements"}, new int[] {0, 0, 0, 1, -1, 0});
+
+    assertThat(deserializedBase3.getOperation()).isInstanceOf(ReplaceOperation.class);
+    assertThat(((ReplaceOperation) deserializedBase3.getOperation()).getNode())
+        .isSameSourceCodeAs(statements.get(8));
   }
 
   private void assertTreePathElement(final List<GrpcTreePathElement> target, final String[] id,
@@ -224,6 +291,30 @@ public class SerializerTest {
     final GrpcFullyQualifiedNames grpcFullyQualifiedNames = grpcBuildResults.getSourcePathToFQNMap()
         .get(foo.toString());
     assertThat(grpcFullyQualifiedNames.getNameList()).containsExactly("example.Foo");
+
+
+    // デシリアライズ実行
+    final TestResults deserialized = Serializer.deserialize(grpcTestResults);
+    assertThat(deserialized).isNotSameAs(EmptyTestResults.instance);
+
+    assertThat(deserialized.getExecutedTestFQNs()).containsExactlyInAnyOrder( //
+        FOO_TEST01, FOO_TEST02, FOO_TEST03, FOO_TEST04);
+
+    assertThat(deserialized.getTestResult(FOO_TEST01).failed).isFalse();
+    assertThat(deserialized.getTestResult(FOO_TEST02).failed).isFalse();
+    assertThat(deserialized.getTestResult(FOO_TEST03).failed).isTrue();
+    assertThat(deserialized.getTestResult(FOO_TEST04).failed).isFalse();
+
+    assertThat(deserialized.getSuccessRate()).isEqualTo(1.0 * 3 / 4);
+
+    final TestResult fooTest01result = deserialized.getTestResult(FOO_TEST01);
+    final TestResult fooTest04result = deserialized.getTestResult(FOO_TEST04);
+
+    assertThat(fooTest01result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
+        COVERED, COVERED, EMPTY, EMPTY, NOT_COVERED, EMPTY, COVERED);
+
+    assertThat(fooTest04result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
+        COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
 
   }
 }

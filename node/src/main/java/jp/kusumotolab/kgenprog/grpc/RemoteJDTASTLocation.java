@@ -60,4 +60,7 @@ public class RemoteJDTASTLocation extends JDTASTLocation {
     }
   }
 
+  public List<GrpcTreePathElement> getPathToLocation() {
+    return pathToLocation;
+  }
 }

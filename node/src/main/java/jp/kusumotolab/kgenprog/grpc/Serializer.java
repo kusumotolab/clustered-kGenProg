@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
+import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
 import jp.kusumotolab.kgenprog.project.ASTLocation;
@@ -346,7 +347,9 @@ public final class Serializer {
     final ASTParser parser = JDTASTConstruction.createNewParser();
     parser.setKind(ASTParser.K_STATEMENTS);
     parser.setSource(statement.toCharArray());
-    final ASTNode results = parser.createAST(null);
-    return (Statement) results;
+    final ASTNode block = parser.createAST(null);
+    final Object result = ((Block) block).statements()
+        .get(0);
+    return (Statement) result;
   }
 }
