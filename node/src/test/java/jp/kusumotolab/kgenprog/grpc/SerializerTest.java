@@ -5,13 +5,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import org.eclipse.jdt.core.dom.Statement;
 import org.junit.Test;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.ga.Base;
 import jp.kusumotolab.kgenprog.ga.Gene;
+import jp.kusumotolab.kgenprog.grpc.GrpcCoverage.Status;
+import jp.kusumotolab.kgenprog.project.GeneratedSourceCode;
 import jp.kusumotolab.kgenprog.project.ProductSourcePath;
+import jp.kusumotolab.kgenprog.project.factory.TargetProject;
+import jp.kusumotolab.kgenprog.project.factory.TargetProjectFactory;
 import jp.kusumotolab.kgenprog.project.jdt.ASTStream;
 import jp.kusumotolab.kgenprog.project.jdt.DeleteOperation;
 import jp.kusumotolab.kgenprog.project.jdt.GeneratedJDTAST;
@@ -20,7 +25,11 @@ import jp.kusumotolab.kgenprog.project.jdt.JDTASTConstruction;
 import jp.kusumotolab.kgenprog.project.jdt.JDTASTLocation;
 import jp.kusumotolab.kgenprog.project.jdt.JDTOperation;
 import jp.kusumotolab.kgenprog.project.jdt.ReplaceOperation;
+import jp.kusumotolab.kgenprog.project.test.LocalTestExecutor;
+import jp.kusumotolab.kgenprog.project.test.TestExecutor;
+import jp.kusumotolab.kgenprog.project.test.TestResults;
 import jp.kusumotolab.kgenprog.testutil.ExampleAlias.Src;
+import jp.kusumotolab.kgenprog.testutil.TestUtil;
 
 public class SerializerTest {
 
@@ -161,4 +170,60 @@ public class SerializerTest {
     }
   }
 
+  @Test
+  public void testSerializeTestResults() {
+    // Testの実行
+    final Path rootPath = Paths.get("../main/example/BuildSuccess01");
+    final TargetProject targetProject = TargetProjectFactory.create(rootPath);
+    final GeneratedSourceCode source = TestUtil.createGeneratedSourceCode(targetProject);
+
+    final Configuration config = new Configuration.Builder(targetProject).build();
+    final TestExecutor executor = new LocalTestExecutor(config);
+    final TestResults testResults = executor.exec(null, source);
+
+    // シリアライズ実行
+    final GrpcTestResults grpcTestResults = Serializer.serialize(testResults);
+
+    // テスト成功を確認
+    assertThat(grpcTestResults.getEmpty()).isFalse();
+
+    final Map<String, GrpcTestResult> valueMap = grpcTestResults.getValueMap();
+    assertThat(valueMap).containsOnlyKeys("example.FooTest.test01", "example.FooTest.test02",
+        "example.FooTest.test03", "example.FooTest.test04");
+
+    // test01
+    final GrpcTestResult testResult1 = valueMap.get("example.FooTest.test01");
+    assertThat(testResult1.getExecutedTestFQN()).isEqualTo("example.FooTest.test01");
+    assertThat(testResult1.getFailed()).isFalse();
+    assertThat(testResult1.getCoverageMap()).containsOnlyKeys("example.Foo");
+    final GrpcCoverage grpcCoverage1 = testResult1.getCoverageMap()
+        .get("example.Foo");
+    assertThat(grpcCoverage1.getExecutedTargetFQN()).isEqualTo("example.Foo");
+    assertThat(grpcCoverage1.getStatusList()).containsExactly(Status.EMPTY, Status.COVERED,
+        Status.EMPTY, Status.COVERED, Status.COVERED, Status.EMPTY, Status.EMPTY,
+        Status.NOT_COVERED, Status.EMPTY, Status.COVERED);
+
+    // test03
+    final GrpcTestResult testResult3 = valueMap.get("example.FooTest.test03");
+    assertThat(testResult3.getExecutedTestFQN()).isEqualTo("example.FooTest.test03");
+    assertThat(testResult3.getFailed()).isTrue();
+    assertThat(testResult3.getCoverageMap()).containsOnlyKeys("example.Foo");
+    final GrpcCoverage grpcCoverage3 = testResult3.getCoverageMap()
+        .get("example.Foo");
+    assertThat(grpcCoverage3.getExecutedTargetFQN()).isEqualTo("example.Foo");
+    assertThat(grpcCoverage3.getStatusList()).containsExactly(Status.EMPTY, Status.COVERED,
+        Status.EMPTY, Status.COVERED, Status.NOT_COVERED, Status.EMPTY, Status.EMPTY,
+        Status.COVERED, Status.EMPTY, Status.COVERED);
+
+    // BuildResults
+    final GrpcBuildResults grpcBuildResults = grpcTestResults.getBuildResults();
+    final Path foo = Paths.get("../main/example/BuildSuccess01/src/example/Foo.java");
+    final Path fooTest = Paths.get("../main/example/BuildSuccess01/src/example/FooTest.java");
+    assertThat(grpcBuildResults.getSourcePathToFQNMap()).containsOnlyKeys(foo.toString(),
+        fooTest.toString());
+    final GrpcFullyQualifiedNames grpcFullyQualifiedNames = grpcBuildResults.getSourcePathToFQNMap()
+        .get(foo.toString());
+    assertThat(grpcFullyQualifiedNames.getNameList()).containsExactly("example.Foo");
+
+  }
 }
