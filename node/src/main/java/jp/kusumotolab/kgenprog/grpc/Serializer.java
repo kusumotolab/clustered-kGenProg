@@ -82,7 +82,7 @@ public final class Serializer {
     gene.getBases()
         .stream()
         .map(Serializer::serialize)
-        .forEach(builder::addBase);;
+        .forEach(builder::addBase);
 
     return builder.build();
   }
@@ -164,7 +164,7 @@ public final class Serializer {
 
     final GrpcCoverage.Builder builder = GrpcCoverage.newBuilder()
         .setExecutedTargetFQN(coverage.executedTargetFQN.value)
-        .addAllStatus(() -> statuses.iterator());
+        .addAllStatus(statuses::iterator);
 
     return builder.build();
   }

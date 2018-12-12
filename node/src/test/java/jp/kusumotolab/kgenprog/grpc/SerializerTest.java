@@ -94,7 +94,7 @@ public class SerializerTest {
   @Test
   public void testSerializeGene() {
     final String fileName = "A.java";
-    final String source = new StringBuilder().append("")
+    final String source = new StringBuilder() //
         .append("class A {\n")
         .append("  public void a() {\n")
         .append("    int n = 0;\n")
