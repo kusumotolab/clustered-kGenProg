@@ -14,6 +14,9 @@ import org.eclipse.jdt.core.dom.ASTParser;
 import org.eclipse.jdt.core.dom.Block;
 import org.eclipse.jdt.core.dom.Statement;
 import org.eclipse.jdt.core.dom.StructuralPropertyDescriptor;
+import jp.kusumotolab.kgenprog.Configuration;
+import jp.kusumotolab.kgenprog.ga.Base;
+import jp.kusumotolab.kgenprog.ga.Gene;
 import jp.kusumotolab.kgenprog.project.ASTLocation;
 import jp.kusumotolab.kgenprog.project.FullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.Operation;
@@ -35,14 +38,16 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 /**
- * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 serialize: KGenProg -> gRPC deserialize: gRPC -> KGenProg
+ * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 
+ * serialize: KGenProg -> gRPC 
+ * deserialize: gRPC -> KGenProg
  */
 public final class Serializer {
 
   private Serializer() {}
 
   public static GrpcConfiguration serialize(
-      final jp.kusumotolab.kgenprog.Configuration configuration) {
+      final Configuration configuration) {
     final TargetProject project = configuration.getTargetProject();
 
     final GrpcConfiguration.Builder builder = GrpcConfiguration.newBuilder()
@@ -71,7 +76,7 @@ public final class Serializer {
     return builder.build();
   }
 
-  public static GrpcGene serialize(final jp.kusumotolab.kgenprog.ga.Gene gene) {
+  public static GrpcGene serialize(final Gene gene) {
     final GrpcGene.Builder builder = GrpcGene.newBuilder();
 
     gene.getBases()
@@ -82,7 +87,7 @@ public final class Serializer {
     return builder.build();
   }
 
-  public static GrpcBase serialize(final jp.kusumotolab.kgenprog.ga.Base base) {
+  public static GrpcBase serialize(final Base base) {
     final GrpcBase.Builder builder = GrpcBase.newBuilder()
         .setOperation(serialize(base.getOperation()))
         .setLocation(serialize(base.getTargetLocation()));
@@ -201,17 +206,17 @@ public final class Serializer {
     return builder.build();
   }
 
-  public static jp.kusumotolab.kgenprog.ga.Gene deserialize(final GrpcGene gene) {
-    final List<jp.kusumotolab.kgenprog.ga.Base> bases = gene.getBaseList()
+  public static Gene deserialize(final GrpcGene gene) {
+    final List<Base> bases = gene.getBaseList()
         .stream()
         .map(Serializer::deserialize)
         .collect(Collectors.toList());
 
-    return new jp.kusumotolab.kgenprog.ga.Gene(bases);
+    return new Gene(bases);
   }
 
-  public static jp.kusumotolab.kgenprog.ga.Base deserialize(final GrpcBase base) {
-    return new jp.kusumotolab.kgenprog.ga.Base(deserialize(base.getLocation()),
+  public static Base deserialize(final GrpcBase base) {
+    return new Base(deserialize(base.getLocation()),
         deserialize(base.getOperation()));
   }
 
@@ -233,7 +238,7 @@ public final class Serializer {
     }
   }
 
-  public static jp.kusumotolab.kgenprog.Configuration deserialize(
+  public static Configuration deserialize(
       final GrpcConfiguration configuration) {
     final Path rootDir = Paths.get(configuration.getRootDir());
     final List<Path> productPaths = configuration.getProductPathsList()
@@ -244,8 +249,8 @@ public final class Serializer {
         .stream()
         .map(Paths::get)
         .collect(Collectors.toList());
-    final jp.kusumotolab.kgenprog.Configuration.Builder builder =
-        new jp.kusumotolab.kgenprog.Configuration.Builder(rootDir, productPaths, testPaths);
+    final Configuration.Builder builder =
+        new Configuration.Builder(rootDir, productPaths, testPaths);
     configuration.getClassPathsList()
         .stream()
         .map(Paths::get)
