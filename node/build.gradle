@@ -37,6 +37,7 @@ def grpcVersion = '1.16.1'
 
 dependencies {
     compile project(':main')
+    testCompile project(':main').sourceSets.test.output
     
     compile group: 'io.grpc', name: 'grpc-netty-shaded', version: grpcVersion
     compile group: 'io.grpc', name: 'grpc-protobuf', version: grpcVersion
