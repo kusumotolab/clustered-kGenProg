@@ -64,11 +64,11 @@ public class SerializerTest {
 
     assertThat(grpcConfig.getRootDir()).isEqualTo(rootDir.toString());
     assertThat(grpcConfig.getProductPathsList()).containsExactly(rootDir.resolve(Src.FOO)
-        .toString(),
+            .toString(),
         rootDir.resolve(Src.BAR)
             .toString());
     assertThat(grpcConfig.getTestPathsList()).containsExactly(rootDir.resolve(Src.FOO_TEST)
-        .toString(),
+            .toString(),
         rootDir.resolve(Src.BAR_TEST)
             .toString());
     assertThat(grpcConfig.getClassPathsList())
@@ -148,7 +148,7 @@ public class SerializerTest {
     assertThat(grpcBase1.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase1.getLocation()
-        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 0});
     assertThat(grpcBase1.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.DELETE);
@@ -158,7 +158,7 @@ public class SerializerTest {
     assertThat(grpcBase2.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase2.getLocation()
-        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 1});
     assertThat(grpcBase2.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.INSERT);
@@ -170,7 +170,7 @@ public class SerializerTest {
     assertThat(grpcBase3.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase3.getLocation()
-        .getLocationList(),
+            .getLocationList(),
         new String[] {"types", "bodyDeclarations", "body", "statements", "thenStatement",
             "statements"},
         new int[] {0, 0, 0, 1, -1, 0});
@@ -206,8 +206,10 @@ public class SerializerTest {
         new String[] {"types", "bodyDeclarations", "body", "statements"}, new int[] {0, 0, 0, 1});
 
     assertThat(deserializedBase2.getOperation()).isInstanceOf(InsertOperation.class);
-    assertThat(((InsertOperation) deserializedBase2.getOperation()).getNode())
-        .isSameSourceCodeAs(statements.get(6));
+    assertThat(deserializedBase2.getOperation()
+        .getTargetSnippet())
+        .isEqualTo(statements.get(6)
+            .toString());
 
     // Replace
     final Base deserializedBase3 = deserialized.getBases()
@@ -220,8 +222,9 @@ public class SerializerTest {
         "body", "statements", "thenStatement", "statements"}, new int[] {0, 0, 0, 1, -1, 0});
 
     assertThat(deserializedBase3.getOperation()).isInstanceOf(ReplaceOperation.class);
-    assertThat(((ReplaceOperation) deserializedBase3.getOperation()).getNode())
-        .isSameSourceCodeAs(statements.get(8));
+    assertThat(deserializedBase3.getOperation()
+        .getTargetSnippet()).isEqualTo(statements.get(8)
+        .toString());
   }
 
   private void assertTreePathElement(final List<GrpcTreePathElement> target, final String[] id,
@@ -246,7 +249,7 @@ public class SerializerTest {
 
     final Configuration config = new Configuration.Builder(targetProject).build();
     final TestExecutor executor = new LocalTestExecutor(config);
-    final TestResults testResults = executor.exec(null, source);
+    final TestResults testResults = executor.exec(source);
 
     // シリアライズ実行
     final GrpcTestResults grpcTestResults = Serializer.serialize(testResults);
@@ -291,7 +294,6 @@ public class SerializerTest {
     final GrpcFullyQualifiedNames grpcFullyQualifiedNames = grpcBuildResults.getSourcePathToFQNMap()
         .get(foo.toString());
     assertThat(grpcFullyQualifiedNames.getNameList()).containsExactly("example.Foo");
-
 
     // デシリアライズ実行
     final TestResults deserialized = Serializer.deserialize(grpcTestResults);

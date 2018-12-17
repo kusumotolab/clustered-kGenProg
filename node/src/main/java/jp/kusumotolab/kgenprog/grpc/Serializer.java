@@ -97,18 +97,16 @@ public final class Serializer {
 
   public static GrpcOperation serialize(final Operation operation) {
     final GrpcOperation.Builder builder = GrpcOperation.newBuilder();
-    if (operation instanceof DeleteOperation) {
+    if (operation.getClass() == DeleteOperation.class) {
       builder.setType(GrpcOperation.Type.DELETE);
 
-    } else if (operation instanceof InsertOperation) {
+    } else if (operation.getClass() == InsertOperation.class) {
       builder.setType(GrpcOperation.Type.INSERT);
-      builder.setStatement(((InsertOperation) operation).getNode()
-          .toString());
+      builder.setStatement(operation.getTargetSnippet());
 
-    } else if (operation instanceof ReplaceOperation) {
+    } else if (operation.getClass() == ReplaceOperation.class) {
       builder.setType(GrpcOperation.Type.REPLACE);
-      builder.setStatement(((ReplaceOperation) operation).getNode()
-          .toString());
+      builder.setStatement(operation.getTargetSnippet());
 
     } else {
       throw new IllegalArgumentException();
@@ -266,7 +264,7 @@ public final class Serializer {
       return EmptyTestResults.instance;
     }
 
-    final TestResults testResults = new TestResults();
+    final TestResultsWithMap testResults = new TestResultsWithMap();
     results.getValueMap()
         .values()
         .stream()
@@ -275,7 +273,7 @@ public final class Serializer {
 
     final Map<ProductSourcePath, Set<FullyQualifiedName>> map =
         deserialize(results.getBuildResults());
-    testResults.setSourcePathToFQN(map::get);
+    testResults.setSourcePathToFQN(map);
     return testResults;
   }
 
