@@ -1,6 +1,5 @@
 package jp.kusumotolab.kgenprog.grpc;
 
-import static jp.kusumotolab.kgenprog.project.jdt.ASTNodeAssert.assertThat;
 import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.COVERED;
 import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.EMPTY;
 import static jp.kusumotolab.kgenprog.project.test.Coverage.Status.NOT_COVERED;
