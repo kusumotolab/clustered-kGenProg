@@ -40,7 +40,12 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 /**
- * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 serialize: KGenProg -> gRPC deserialize: gRPC -> KGenProg
+ * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群
+ * 
+ * <pre>
+ * serialize: KGenProg -> gRPC 
+ * deserialize: gRPC -> KGenProg
+ * </pre>
  */
 public final class Serializer {
 
