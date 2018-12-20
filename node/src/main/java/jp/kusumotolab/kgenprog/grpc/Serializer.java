@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +25,7 @@ import jp.kusumotolab.kgenprog.project.ProductSourcePath;
 import jp.kusumotolab.kgenprog.project.TargetFullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.TestFullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.build.BuildResults;
+import jp.kusumotolab.kgenprog.project.build.EmptyBuildResults;
 import jp.kusumotolab.kgenprog.project.build.JavaBinaryObject;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
 import jp.kusumotolab.kgenprog.project.jdt.DeleteOperation;
@@ -38,16 +40,13 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 /**
- * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 
- * serialize: KGenProg -> gRPC 
- * deserialize: gRPC -> KGenProg
+ * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群 serialize: KGenProg -> gRPC deserialize: gRPC -> KGenProg
  */
 public final class Serializer {
 
   private Serializer() {}
 
-  public static GrpcConfiguration serialize(
-      final Configuration configuration) {
+  public static GrpcConfiguration serialize(final Configuration configuration) {
     final TargetProject project = configuration.getTargetProject();
 
     final GrpcConfiguration.Builder builder = GrpcConfiguration.newBuilder()
@@ -183,14 +182,18 @@ public final class Serializer {
   }
 
   public static GrpcBuildResults serialize(final BuildResults buildResults) {
-    final Map<String, GrpcFullyQualifiedNames> map = buildResults.getBinaryStore()
-        .getAll()
-        .stream()
-        .collect(Collectors.groupingBy(v -> v.getOriginPath().path.toString(),
-            Collectors.collectingAndThen(Collectors.toList(), Serializer::serialize)));
+    final GrpcBuildResults.Builder builder = GrpcBuildResults.newBuilder();
+    if (buildResults.getClass() == EmptyBuildResults.class) {
+      builder.putAllSourcePathToFQN(Collections.emptyMap());
+    } else {
+      final Map<String, GrpcFullyQualifiedNames> map = buildResults.getBinaryStore()
+          .getAll()
+          .stream()
+          .collect(Collectors.groupingBy(v -> v.getOriginPath().path.toString(),
+              Collectors.collectingAndThen(Collectors.toList(), Serializer::serialize)));
 
-    final GrpcBuildResults.Builder builder = GrpcBuildResults.newBuilder()
-        .putAllSourcePathToFQN(map);
+      builder.putAllSourcePathToFQN(map);
+    }
 
     return builder.build();
   }
@@ -214,8 +217,7 @@ public final class Serializer {
   }
 
   public static Base deserialize(final GrpcBase base) {
-    return new Base(deserialize(base.getLocation()),
-        deserialize(base.getOperation()));
+    return new Base(deserialize(base.getLocation()), deserialize(base.getOperation()));
   }
 
   public static ASTLocation deserialize(final GrpcASTLocation location) {
@@ -236,8 +238,7 @@ public final class Serializer {
     }
   }
 
-  public static Configuration deserialize(
-      final GrpcConfiguration configuration) {
+  public static Configuration deserialize(final GrpcConfiguration configuration) {
     final Path rootDir = Paths.get(configuration.getRootDir());
     final List<Path> productPaths = configuration.getProductPathsList()
         .stream()

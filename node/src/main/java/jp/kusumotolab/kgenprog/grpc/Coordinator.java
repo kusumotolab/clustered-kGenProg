@@ -52,7 +52,7 @@ public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
 
     final int projectId = idCounter.getAndIncrement();
     final Configuration config = Serializer.deserialize(request.getConfiguration());
-    final Project project = new Project(projectId, config);
+    final Project project = createProject(projectId, config);
     projectMap.put(projectId, project);
 
     final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
@@ -118,5 +118,12 @@ public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
     responseObserver.onCompleted();
     log.info("unregisterProject response");
     log.debug(response.toString());
+  }
+
+  /**
+   * method for test
+   */
+  protected Project createProject(final int projectId, final Configuration config) {
+    return new Project(projectId, config);
   }
 }

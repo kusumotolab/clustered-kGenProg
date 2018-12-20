@@ -48,6 +48,7 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.mockito/mockito-core
     testCompile group: 'org.mockito', name: 'mockito-core', version: '2.+'
+    testCompile group: 'io.grpc', name: 'grpc-testing', version: grpcVersion
 }
 
 protobuf {
