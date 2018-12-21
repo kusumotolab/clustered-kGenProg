@@ -21,11 +21,13 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 public class Project {
 
   private final Configuration config;
+  private final int projectId;
   private final Strategies strategies;
   private final VariantStore variantStore;
 
   public Project(final int projectId, final Configuration config) {
     this.config = config;
+    this.projectId = projectId;
 
     this.strategies = createStrategies(this.config);
     this.variantStore = new VariantStore(this.config, strategies);
@@ -39,6 +41,10 @@ public class Project {
 
   public void unregister() {
 
+  }
+
+  public int getProjectId() {
+    return projectId;
   }
 
   private Strategies createStrategies(final Configuration configuration) {
