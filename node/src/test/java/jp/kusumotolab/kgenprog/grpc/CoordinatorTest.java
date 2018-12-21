@@ -121,7 +121,7 @@ public class CoordinatorTest {
         .getProjectId();
 
 
-    // project1.executeTestが実行ることを確認する
+    // project1.executeTestが実行されることを確認する
     final GrpcExecuteTestRequest executeTestRequest1 = GrpcExecuteTestRequest.newBuilder()
         .setProjectId(projectId1)
         .build();
