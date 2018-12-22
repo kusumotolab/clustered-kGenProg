@@ -23,6 +23,11 @@ public class RemoteTestExecutor implements TestExecutor {
         managedChannel);
   }
 
+  public RemoteTestExecutor(final ManagedChannel managedChannel) {
+    blockingStub = KGenProgClusterGrpc.newBlockingStub(
+        managedChannel);
+  }
+
   @Override
   public TestResults exec(final Variant variant) {
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
