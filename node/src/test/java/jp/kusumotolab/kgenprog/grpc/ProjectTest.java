@@ -1,6 +1,8 @@
 package jp.kusumotolab.kgenprog.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -10,6 +12,7 @@ import org.junit.Test;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.ga.variant.Base;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.project.GeneratedSourceCode;
 import jp.kusumotolab.kgenprog.project.ProductSourcePath;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
@@ -52,8 +55,10 @@ public class ProjectTest {
 
     // LocalTestExecutorでのテスト実行
     final GeneratedSourceCode modifiedCode = operation.apply(source, location);
+    final Variant variant = mock(Variant.class);
+    when(variant.getGeneratedSourceCode()).thenReturn(modifiedCode);
     final TestExecutor executor = new LocalTestExecutor(config);
-    final TestResults localResults = executor.exec(modifiedCode);
+    final TestResults localResults = executor.exec(variant);
 
     // Projectでのテスト実行
     final Project project = new Project(0, config);

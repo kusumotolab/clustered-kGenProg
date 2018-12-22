@@ -9,6 +9,8 @@ import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST02;
 import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST03;
 import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST04;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -20,6 +22,7 @@ import org.junit.Test;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.ga.variant.Base;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.grpc.GrpcCoverage.Status;
 import jp.kusumotolab.kgenprog.project.GeneratedSourceCode;
 import jp.kusumotolab.kgenprog.project.ProductSourcePath;
@@ -245,10 +248,12 @@ public class SerializerTest {
     final Path rootPath = Paths.get("../main/example/BuildSuccess01");
     final TargetProject targetProject = TargetProjectFactory.create(rootPath);
     final GeneratedSourceCode source = TestUtil.createGeneratedSourceCode(targetProject);
+    final Variant variant = mock(Variant.class);
+    when(variant.getGeneratedSourceCode()).thenReturn(source);
 
     final Configuration config = new Configuration.Builder(targetProject).build();
     final TestExecutor executor = new LocalTestExecutor(config);
-    final TestResults testResults = executor.exec(source);
+    final TestResults testResults = executor.exec(variant);
 
     // シリアライズ実行
     final GrpcTestResults grpcTestResults = Serializer.serialize(testResults);
