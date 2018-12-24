@@ -1,6 +1,5 @@
 package jp.kusumotolab.kgenprog.grpc;
 
-import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.Strategies;
 import jp.kusumotolab.kgenprog.fl.FaultLocalization;
@@ -36,9 +35,7 @@ public class Project {
 
   public TestResults executeTest(final Gene gene) {
     final Variant variant = variantStore.createVariant(gene, EmptyHistoricalElement.shared);
-    final Single<TestResults> testResultsSingle = strategies.execAsyncTestExecutor(
-        Single.just(variant));
-    return testResultsSingle.blockingGet();
+    return variant.getTestResults();
   }
 
   public void unregister() {
