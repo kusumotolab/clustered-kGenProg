@@ -8,7 +8,6 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Single;
-import jp.kusumotolab.kgenprog.Configuration;
 
 public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
 
@@ -22,7 +21,7 @@ public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
 
   public Coordinator(final int port, final Worker worker) {
     this.worker = worker;
-    
+
     server = ServerBuilder.forPort(port)
         .addService(this)
         .build();
@@ -117,12 +116,5 @@ public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
       log.info("unregisterProject response");
       log.debug(response.toString());
     });
-  }
-
-  /**
-   * method for test
-   */
-  protected Project createProject(final int projectId, final Configuration config) {
-    return new Project(projectId, config);
   }
 }

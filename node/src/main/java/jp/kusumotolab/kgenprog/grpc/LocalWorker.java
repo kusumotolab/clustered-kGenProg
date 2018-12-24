@@ -23,7 +23,7 @@ public class LocalWorker implements Worker {
 
   @Override
   public Single<GrpcRegisterProjectResponse> registerProject(
-      final GrpcRegisterProjectRequest request, int projectId) {
+      final GrpcRegisterProjectRequest request, final int projectId) {
 
     final Configuration config = Serializer.deserialize(request.getConfiguration());
     final Project project = createProject(projectId, config);

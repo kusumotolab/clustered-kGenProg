@@ -12,6 +12,7 @@ public interface Worker {
 
   /**
    * ワーカーにプロジェクトを登録する
+   * 
    * @param request リクエスト
    * @param projectId コーディネータによって割り当てられたプロジェクトID
    * @return レスポンス
@@ -21,6 +22,7 @@ public interface Worker {
 
   /**
    * テストを実行しその結果を返す
+   * 
    * @param request リクエスト
    * @return レスポンス
    */
@@ -28,6 +30,7 @@ public interface Worker {
 
   /**
    * ワーカーからプロジェクトの登録を解除する
+   * 
    * @param request リクエスト
    * @return レスポンス
    */
