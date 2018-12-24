@@ -9,6 +9,8 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 public class TestResultsWithMap extends TestResults {
 
+  private static final long serialVersionUID = 1L;
+
   private Map<ProductSourcePath, Set<FullyQualifiedName>> map = new HashMap<>();
 
 
