@@ -60,8 +60,8 @@ public class LocalWorkerTest {
     final ArgumentCaptor<Configuration> captor = ArgumentCaptor.forClass(Configuration.class);
     verify(worker, times(1)).createProject(anyInt(), captor.capture());
 
-    final Configuration captoredConfig = captor.getValue();
-    final TargetProject targetProject1 = captoredConfig.getTargetProject();
+    final Configuration capturedConfig = captor.getValue();
+    final TargetProject targetProject1 = capturedConfig.getTargetProject();
     assertThat(targetProject1.rootPath).isEqualTo(targetProject.rootPath);
     assertThat(targetProject1.getClassPaths()).containsAll(targetProject.getClassPaths());
     assertThat(targetProject1.getProductSourcePaths())

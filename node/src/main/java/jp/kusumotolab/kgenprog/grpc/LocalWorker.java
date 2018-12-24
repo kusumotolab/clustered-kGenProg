@@ -52,12 +52,10 @@ public class LocalWorker implements Worker {
       final Gene gene = Serializer.deserialize(request.getGene());
       final Single<Gene> geneSingle = Single.just(gene);
       final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
-      responseSingle = resultsSingle.map(results -> {
-        return GrpcExecuteTestResponse.newBuilder()
-            .setStatus(Coordinator.STATUS_SUCCESS)
-            .setTestResults(Serializer.serialize(results))
-            .build();
-      });
+      responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
+          .setStatus(Coordinator.STATUS_SUCCESS)
+          .setTestResults(Serializer.serialize(results))
+          .build());
     }
 
     return responseSingle;
