@@ -11,8 +11,8 @@ import jp.kusumotolab.kgenprog.ga.selection.VariantSelection;
 import jp.kusumotolab.kgenprog.ga.validation.DefaultCodeValidation;
 import jp.kusumotolab.kgenprog.ga.validation.SourceCodeValidation;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.ga.variant.VariantStore;
-import jp.kusumotolab.kgenprog.project.GeneratedSourceCode;
 import jp.kusumotolab.kgenprog.project.jdt.JDTASTConstruction;
 import jp.kusumotolab.kgenprog.project.test.LocalTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
@@ -34,9 +34,8 @@ public class Project {
   }
 
   public TestResults executeTest(final Gene gene) {
-    final GeneratedSourceCode sourceCode = strategies.execSourceCodeGeneration(variantStore, gene);
-    final TestResults results = strategies.execTestExecutor(sourceCode);
-    return results;
+    final Variant variant = variantStore.createVariant(gene, EmptyHistoricalElement.shared);
+    return variant.getTestResults();
   }
 
   public void unregister() {
