@@ -78,7 +78,25 @@ public class ProjectZipper {
     try {
       return new Zipper(project, stream).zip();
     } catch (final UncheckedIOException e) {
-      throw e.getCause();
+      throw new IOException(e.getCause());
+    }
+  }
+
+  /**
+   * {@link #zipProject(TargetProject, Supplier)} によって生成されたZIPファイルを展開する
+   * 
+   * @param destination 展開先ディレクトリ
+   * @param project 展開対象プロジェクト
+   * @param stream ZIPファイル読み込みストリーム
+   * @return 各パスを展開先ディレクトリでのパスに変換した{@link TargetProject}
+   * @throws IOException ファイル数やファイルサイズが制限を超えたとき。展開先ディレクトリ以外にファイルが展開されたとき。
+   */
+  public static TargetProject unzipProject(final Path destination, final TargetProject project,
+      final Supplier<InputStream> stream) throws IOException {
+    try {
+      return new Unzipper(destination, project, stream).unzip();
+    } catch (final UncheckedIOException e) {
+      throw new IOException(e.getCause());
     }
   }
 
@@ -259,74 +277,98 @@ public class ProjectZipper {
     }
   }
 
-  long sizeCnt;
 
-  public TargetProject unzipProject(final Path destination, final TargetProject project,
-      final Supplier<InputStream> stream) throws IOException {
-    int entryCnt = 0;
-    sizeCnt = 0;
-    try (ZipInputStream zis = new ZipInputStream(stream.get())) {
-      while (unzipEachEntry(zis, zis.getNextEntry(), destination)) {
-        entryCnt++;
-        if (entryCnt > ENTRY_NUMBER_LIMIT) {
-          throw new IOException("Too many files to unzip.");
+  private static class Unzipper {
+
+    private final Path destination;
+    private final TargetProject project;
+    private final Supplier<InputStream> stream;
+
+    private ZipInputStream zipInputStream;
+    private final byte[] buffer;
+    private long sizeCnt;
+
+    public Unzipper(final Path destination, final TargetProject project,
+        final Supplier<InputStream> stream) {
+      this.destination = destination;
+      this.project = project;
+      this.stream = stream;
+
+      buffer = new byte[BUFFER_SIZE];
+    }
+
+    public TargetProject unzip() throws IOException {
+      int entryCnt = 0;
+      try (final ZipInputStream zis = new ZipInputStream(stream.get())) {
+        zipInputStream = zis;
+        while (readEachEntry(zis.getNextEntry())) {
+          entryCnt++;
+          if (entryCnt > ENTRY_NUMBER_LIMIT) {
+            throw new IOException("Too many files to unzip.");
+          }
         }
       }
+
+      final List<Path> productPaths = project.getProductSourcePaths()
+          .stream()
+          .map(v -> destination.resolve(v.path))
+          .collect(Collectors.toList());
+
+      final List<Path> testPaths = project.getTestSourcePaths()
+          .stream()
+          .map(v -> destination.resolve(v.path))
+          .collect(Collectors.toList());
+
+      final List<Path> classPaths = project.getClassPaths()
+          .stream()
+          .map(v -> destination.resolve(v.path))
+          .collect(Collectors.toList());
+
+      return new RawProjectFactory(destination, productPaths, testPaths, classPaths).create();
     }
 
-    final List<Path> productPaths = project.getProductSourcePaths()
-        .stream()
-        .map(v -> destination.resolve(v.path))
-        .collect(Collectors.toList());
+    /**
+     * 1つのファイルを読み込み、展開先ディレクトリへ展開する
+     */
+    private boolean readEachEntry(final ZipEntry entry) throws IOException {
+      if (entry == null) {
+        return false;
+      }
+      if (entry.isDirectory()) {
+        return true;
+      }
 
-    final List<Path> testPaths = project.getTestSourcePaths()
-        .stream()
-        .map(v -> destination.resolve(v.path))
-        .collect(Collectors.toList());
+      final Path filePath = createFilePath(entry.getName());
+      Files.createDirectories(filePath.getParent());
 
-    final List<Path> classPaths = project.getClassPaths()
-        .stream()
-        .map(v -> destination.resolve(v.path))
-        .collect(Collectors.toList());
+      try (final OutputStream dest = Files.newOutputStream(filePath)) {
+        int count;
+        while ((count = zipInputStream.read(buffer, 0, BUFFER_SIZE)) != -1) {
+          sizeCnt += count;
+          if (sizeCnt > FILE_SIZE_LIMIT) {
+            throw new IOException("File being unzipped is too big.");
+          }
+          dest.write(buffer, 0, count);
+        }
+        zipInputStream.closeEntry();
+      }
 
-    return new RawProjectFactory(destination, productPaths, testPaths, classPaths).create();
-  }
-
-  private boolean unzipEachEntry(final ZipInputStream zis, final ZipEntry entry,
-      final Path rootPath) throws IOException {
-    if (entry == null) {
-      return false;
-    }
-    if (entry.isDirectory()) {
       return true;
     }
 
-    final Path filePath = createFilePath(rootPath, entry.getName());
-    Files.createDirectories(filePath.getParent());
-
-    final byte[] data = new byte[BUFFER_SIZE];
-    try (OutputStream dest = Files.newOutputStream(filePath)) {
-      int count;
-      while ((count = zis.read(data, 0, BUFFER_SIZE)) != -1) {
-        sizeCnt += count;
-        if (sizeCnt > FILE_SIZE_LIMIT) {
-          throw new IOException("File being unzipped is too big.");
-        }
-        dest.write(data, 0, count);
+    /**
+     * ZIPファイルパスを展開先パスに変換する
+     * 
+     * @throws IOException 変換結果が展開先ディレクトリの外になってしまう場合
+     */
+    private Path createFilePath(final String filepath) throws IOException {
+      final Path realFilePath = destination.resolve(filepath)
+          .normalize();
+      if (!realFilePath.startsWith(destination)) {
+        throw new IOException("File is outside extraction target directory.");
       }
-      zis.closeEntry();
+      return realFilePath;
     }
-
-    return true;
-  }
-
-  private Path createFilePath(final Path rootPath, final String filename) throws IOException {
-    final Path realFilePath = rootPath.resolve(filename)
-        .normalize();
-    if (!realFilePath.startsWith(rootPath)) {
-      throw new IOException("File is outside extraction target directory.");
-    }
-    return realFilePath;
   }
 
   /**

@@ -40,7 +40,6 @@ public class ProjectZipperTest {
         .get().path;
 
     // TargetProjectをzipする
-    final ProjectZipper zipper = new ProjectZipper();
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     final TargetProject zip = ProjectZipper.zipProject(targetProject, () -> outputStream);
 
@@ -63,7 +62,7 @@ public class ProjectZipperTest {
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
     final Path destination = tempFolder.newFolder()
         .toPath();
-    final TargetProject unzip = zipper.unzipProject(destination, zip, () -> inputStream);
+    final TargetProject unzip = ProjectZipper.unzipProject(destination, zip, () -> inputStream);
 
     final Path unzipFoo = unzip.rootPath.resolve(ProjectZipper.PROJECT_PREFIX)
         .resolve("src/main/java/example/Foo.java");
