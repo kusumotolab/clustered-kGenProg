@@ -20,140 +20,243 @@ import jp.kusumotolab.kgenprog.project.ClassPath;
 import jp.kusumotolab.kgenprog.project.factory.RawProjectFactory;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
 
+/**
+ * TargetProjectのZip、Unzipを行う
+ * 
+ * @author Ryo Arima
+ *
+ */
 public class ProjectZipper {
 
-  private static final int BUFFER = 4048;
+  /**
+   * ファイルIOバッファのサイズ
+   */
+  private static final int BUFFER_SIZE = 4048;
+
+  /**
+   * ZIPファイルが展開されたときの最大ファイルサイズ
+   */
   private static final long FILE_SIZE_LIMIT = 1L << 30;
+
+  /**
+   * ZIPファイルが展開されたときの最大ファイル数
+   */
   private static final int ENTRY_NUMBER_LIMIT = 100000;
-  public static final Path PROJECT_PREFIX = Paths.get(".", "project");
-  public static final Path CLASSPATH_PREFIX = Paths.get(".", "classes");
+
+  /**
+   * プロジェクト本体のファイルを格納するディレクトリ
+   */
+  public static final Path PROJECT_PREFIX = Paths.get("project");
+
+  /**
+   * 依存関係のファイルを格納するディレクトリ
+   */
+  public static final Path CLASSPATH_PREFIX = Paths.get("classes");
 
 
+  /**
+   * TargetProjectに含まれるファイルをZIPファイル形式として1つにまとめる
+   * 
+   * 生成されるZIPファイルは以下のような構造となる
+   * <ul>
+   * <li>{@link TargetProject#rootPath} 以下のディレクトリは {@link #PROJECT_PREFIX}以下に格納される</li>
+   * <li>{@link TargetProject#getClassPaths()} のファイルは {@link #CLASSPATH_PREFIX}以下に格納される</li>
+   * <ul>
+   * <li>クラスパスが単一ファイルの場合、そのままのファイル名で格納される</li>
+   * <li>クラスパスがディレクトリの場合、ディレクトリ名は数字に変換される。ディレクトリ内の構造は維持される</li>
+   * </ul>
+   * </ul>
+   * 
+   * 生成されたZIPファイルは{@code stream}から取得される{@link OutputStream}に書き込まれる
+   *
+   * @param project ZIP対象プロジェクト
+   * @param stream 書き込み先ストリーム
+   * @return 各パスをZIPファイル内のパスへ変換した{@link TargetProject}
+   */
+  public static TargetProject zipProject(final TargetProject project,
+      final Supplier<OutputStream> stream) throws IOException {
+    try {
+      return new Zipper(project, stream).zip();
+    } catch (final UncheckedIOException e) {
+      throw e.getCause();
+    }
+  }
 
-  public TargetProject zipProject(final TargetProject project, final Supplier<OutputStream> stream)
-      throws IOException {
+  private static class Zipper {
 
-    final List<Path> productPaths;
-    final List<Path> testPaths;
-    final List<Path> classPaths = new ArrayList<>();
-    final Path zipRootPath = Paths.get(".");
-    final Path root = project.rootPath.toRealPath();
-    try (ZipOutputStream zos = new ZipOutputStream(stream.get())) {
-      // プロジェクト本体の書き込み
+    private final TargetProject project;
+    private final Supplier<OutputStream> stream;
+
+    private final Path root;
+    private ZipOutputStream zipOutputStream;
+    private final byte[] buffer;
+    private final List<Path> classPaths;
+
+    public Zipper(final TargetProject project, final Supplier<OutputStream> stream)
+        throws IOException {
+      this.project = project;
+      this.stream = stream;
+
+      root = project.rootPath.toRealPath();
+
+      buffer = new byte[BUFFER_SIZE];
+      classPaths = new ArrayList<>();
+    }
+
+    public TargetProject zip() throws IOException {
+      try (final ZipOutputStream zos = new ZipOutputStream(stream.get())) {
+        zipOutputStream = zos;
+
+        writeProjectFiles();
+        writeClassPaths();
+      }
+
+      final List<Path> productPaths = convertProductSourcePaths();
+      final List<Path> testPaths = convertTestSourcePaths();
+
+      return new RawProjectFactory(Paths.get("."), productPaths, testPaths, classPaths).create();
+    }
+
+    /**
+     * rootディレクトリ以下にあるプロジェクト本体のファイルをZipOutpuStreamに書き込む
+     */
+    private void writeProjectFiles() throws IOException {
       try (final Stream<Path> paths = Files.walk(root)) {
         paths.filter(p -> !Files.isDirectory(p))
-            .forEach(p -> zipEachFile(zos, p, pathToString(createProjectPath(root, p))));
+            .forEach(p -> writeEachFile(p, createProjectPath(p)));
       }
+    }
+
+    /**
+     * 依存ファイルをZipOutpuStreamに書き込む
+     */
+    private void writeClassPaths() throws IOException {
       final AtomicInteger classDirCnt = new AtomicInteger(0);
-      // 依存ファイルの書き込み
       for (final ClassPath cp : project.getClassPaths()) {
         final Path classPath = cp.path.toRealPath();
-        if (isChild(root, classPath)) {
-          // rootディレクトリ以下はコピー済み
-          classPaths.add(createProjectPath(root, classPath));
-          continue;
-        }
 
-        if (Files.isDirectory(classPath)) {
-          // クラスフォルダ
+        if (isDescendant(root, classPath)) {
+          // rootディレクトリ以下はコピー済み
+          classPaths.add(createProjectPath(classPath));
+
+
+        } else if (Files.isDirectory(classPath)) {
+          // クラスディレクトリ
           try (final Stream<Path> paths = Files.walk(classPath)) {
             paths.filter(p -> !Files.isDirectory(p))
                 .forEach(p -> {
-                  final Path path =
-                      createDirectoryClassPath(root, classPath, classDirCnt.getAndIncrement(), p);
+                  // ディレクトリ名が重複する可能性があるので数字ディレクトリにする
+                  int number = classDirCnt.getAndIncrement();
+                  final Path path = createDirectoryClassPath(classPath, number, p);
                   classPaths.add(path);
-                  zipEachFile(zos, p, pathToString(path));
+                  writeEachFile(p, path);
                 });
           }
 
         } else {
           // 単一のファイル（jarなど）
-          final Path path = createSingleClassPath(root, classPath);
+          final Path path = createSingleClassPath(classPath);
           classPaths.add(path);
-          zipEachFile(zos, classPath, pathToString(path));
+          writeEachFile(classPath, path);
         }
       }
-
-
-      productPaths = project.getProductSourcePaths()
-          .stream()
-          .map(v -> {
-            try {
-              return createProjectPath(root, v.path.toRealPath());
-            } catch (final IOException e) {
-              throw new UncheckedIOException(e);
-            }
-          })
-          .collect(Collectors.toList());
-
-      testPaths = project.getTestSourcePaths()
-          .stream()
-          .map(v -> {
-            try {
-              return createProjectPath(root, v.path.toRealPath());
-            } catch (final IOException e) {
-              throw new UncheckedIOException(e);
-            }
-          })
-          .collect(Collectors.toList());
-
-    } catch (final UncheckedIOException e) {
-      throw e.getCause();
     }
 
-    return new RawProjectFactory(zipRootPath, productPaths, testPaths, classPaths).create();
-  }
+    /**
+     * 1つのファイルをZipOutpuStreamに書き込む
+     * 
+     * @param realPath 実際のファイルへのパス
+     * @param zipPath ZIPファイル中でのパス
+     */
+    private void writeEachFile(final Path realPath, final Path zipPath) {
+      final String zipPathStr = pathToString(zipPath);
+      try (InputStream inputStream = Files.newInputStream(realPath)) {
+        final ZipEntry entry = new ZipEntry(zipPathStr);
+        zipOutputStream.putNextEntry(entry);
 
-  private void zipEachFile(final ZipOutputStream zos, final Path realPath, final String zipPath) {
-    final byte[] data = new byte[BUFFER];
-    try (InputStream inputStream = Files.newInputStream(realPath)) {
-      final ZipEntry entry = new ZipEntry(zipPath);
-      zos.putNextEntry(entry);
-
-      int count;
-      while ((count = inputStream.read(data, 0, BUFFER)) != -1) {
-        zos.write(data, 0, count);
+        int count;
+        while ((count = inputStream.read(buffer, 0, BUFFER_SIZE)) != -1) {
+          zipOutputStream.write(buffer, 0, count);
+        }
+        zipOutputStream.closeEntry();
+      } catch (final IOException e) {
+        throw new UncheckedIOException(e);
       }
-      zos.closeEntry();
-    } catch (final IOException e) {
-      throw new UncheckedIOException(e);
     }
-  }
 
-  private Path createProjectPath(final Path root, final Path target) {
-    final Path relativePath = root.relativize(target);
-    final Path prefixPath = PROJECT_PREFIX.resolve(relativePath);
-    return prefixPath;
-  }
+    /**
+     * プロジェクト本体ファイルのパスを、ZIPファイル中でのパスに変換する
+     */
+    private Path createProjectPath(final Path target) {
+      final Path relativePath = root.relativize(target);
+      final Path prefixPath = PROJECT_PREFIX.resolve(relativePath);
+      return prefixPath;
+    }
 
-  private Path createSingleClassPath(final Path root, final Path target) {
-    // jarファイルは1つのディレクトリに全部入れる
-    final Path prefixPath = CLASSPATH_PREFIX.resolve(target.getFileName());
-    return prefixPath;
-  }
+    /**
+     * 依存ファイルへのパスを、ZIPファイル中でのパスに変換する
+     */
+    private Path createSingleClassPath(final Path target) {
+      final Path prefixPath = CLASSPATH_PREFIX.resolve(target.getFileName());
+      return prefixPath;
+    }
 
-  private Path createDirectoryClassPath(final Path root, final Path classDir, final int classDirCnt,
-      final Path target) {
-    // ディレクトリクラスパスは名前が衝突する可能性があるので数字にする
-    final Path relativePath = classDir.relativize(target);
-    final Path prefixPath = CLASSPATH_PREFIX.resolve(Integer.toString(classDirCnt))
-        .resolve(relativePath);
-    return prefixPath;
-  }
+    /**
+     * 依存ディレクトリへのパスを、ZIPファイル中でのパスに変換する
+     */
+    private Path createDirectoryClassPath(final Path classDir, final int id, final Path target) {
+      final Path relativePath = classDir.relativize(target);
+      final Path prefixPath = CLASSPATH_PREFIX.resolve(Integer.toString(id))
+          .resolve(relativePath);
+      return prefixPath;
+    }
 
-  private boolean isChild(final Path root, final Path target) throws IOException {
-    return root.startsWith(target);
-  }
+    /**
+     * ProductSourcePathsをZIPファイル中でのパスに変換する
+     */
+    private List<Path> convertProductSourcePaths() {
+      return project.getProductSourcePaths()
+          .stream()
+          .map(v -> {
+            try {
+              return createProjectPath(v.path.toRealPath());
+            } catch (final IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          })
+          .collect(Collectors.toList());
+    }
 
-  private String pathToString(final Path path) {
-    return path.toString()
-        .replace('\\', '/');
-  }
+    /**
+     * TestSourcePathsをZIPファイル中でのパスに変換する
+     */
+    private List<Path> convertTestSourcePaths() {
+      return project.getTestSourcePaths()
+          .stream()
+          .map(v -> {
+            try {
+              return createProjectPath(v.path.toRealPath());
+            } catch (final IOException e) {
+              throw new UncheckedIOException(e);
+            }
+          })
+          .collect(Collectors.toList());
+    }
 
-  public static void main(final String[] args) throws IOException {
-    Files.walk(Paths.get(".")
-        .toRealPath())
-        .forEach(System.out::println);
+    /**
+     * パスを\'/\'区切りの文字列に変換する
+     */
+    private String pathToString(final Path path) {
+      final String result = path.toString();
+      final String separator = path.getFileSystem()
+          .getSeparator();
+      if (separator.equals("/")) {
+        return result;
+      }
+
+      return path.toString()
+          .replace(separator, "/");
+    }
   }
 
   long sizeCnt;
@@ -201,10 +304,10 @@ public class ProjectZipper {
     final Path filePath = createFilePath(rootPath, entry.getName());
     Files.createDirectories(filePath.getParent());
 
-    final byte[] data = new byte[BUFFER];
+    final byte[] data = new byte[BUFFER_SIZE];
     try (OutputStream dest = Files.newOutputStream(filePath)) {
       int count;
-      while ((count = zis.read(data, 0, BUFFER)) != -1) {
+      while ((count = zis.read(data, 0, BUFFER_SIZE)) != -1) {
         sizeCnt += count;
         if (sizeCnt > FILE_SIZE_LIMIT) {
           throw new IOException("File being unzipped is too big.");
@@ -226,4 +329,10 @@ public class ProjectZipper {
     return realFilePath;
   }
 
+  /**
+   * targetがrootディレクトリ以下にあるかを確認する
+   */
+  private static boolean isDescendant(final Path root, final Path target) throws IOException {
+    return root.startsWith(target);
+  }
 }

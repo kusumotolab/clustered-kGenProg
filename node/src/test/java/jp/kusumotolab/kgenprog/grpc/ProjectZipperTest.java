@@ -42,7 +42,7 @@ public class ProjectZipperTest {
     // TargetProjectをzipする
     final ProjectZipper zipper = new ProjectZipper();
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    final TargetProject zip = zipper.zipProject(targetProject, () -> outputStream);
+    final TargetProject zip = ProjectZipper.zipProject(targetProject, () -> outputStream);
 
     final Path zipFoo = ProjectZipper.PROJECT_PREFIX.resolve("src/main/java/example/Foo.java");
     final Path zipFooTest =
