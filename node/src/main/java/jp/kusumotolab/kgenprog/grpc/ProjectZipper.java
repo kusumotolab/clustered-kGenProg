@@ -164,7 +164,7 @@ public class ProjectZipper {
             paths.filter(p -> !Files.isDirectory(p))
                 .forEach(p -> {
                   // ディレクトリ名が重複する可能性があるので数字ディレクトリにする
-                  int number = classDirCnt.getAndIncrement();
+                  final int number = classDirCnt.getAndIncrement();
                   final Path path = createDirectoryClassPath(classPath, number, p);
                   classPaths.add(path);
                   writeEachFile(p, path);
@@ -188,7 +188,7 @@ public class ProjectZipper {
      */
     private void writeEachFile(final Path realPath, final Path zipPath) {
       final String zipPathStr = pathToString(zipPath);
-      try (InputStream inputStream = Files.newInputStream(realPath)) {
+      try (final InputStream inputStream = Files.newInputStream(realPath)) {
         final ZipEntry entry = new ZipEntry(zipPathStr);
         zipOutputStream.putNextEntry(entry);
 
