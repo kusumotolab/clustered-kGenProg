@@ -22,7 +22,7 @@ public class ProjectZipperTest {
   @Test
   public void test() throws IOException {
     // Mavenで記述された題材の読み込み
-    final Path rootPath = Paths.get("../main/example/BuildSuccess05");
+    final Path rootPath = Paths.get("../main/example/BuildSuccess01");
     final TargetProject targetProject = TargetProjectFactory.create(rootPath);
     final Path originFoo = targetProject.getProductSourcePaths()
         .get(0).path;
@@ -43,9 +43,8 @@ public class ProjectZipperTest {
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     final TargetProject zip = ProjectZipper.zipProject(targetProject, () -> outputStream);
 
-    final Path zipFoo = ProjectZipper.PROJECT_PREFIX.resolve("src/main/java/example/Foo.java");
-    final Path zipFooTest =
-        ProjectZipper.PROJECT_PREFIX.resolve("src/test/java/example/FooTest.java");
+    final Path zipFoo = ProjectZipper.PROJECT_PREFIX.resolve("src/example/Foo.java");
+    final Path zipFooTest = ProjectZipper.PROJECT_PREFIX.resolve("src/example/FooTest.java");
     final Path zipJUnit = ProjectZipper.CLASSPATH_PREFIX.resolve("junit-4.12.jar");
     final Path zipHamcrest = ProjectZipper.CLASSPATH_PREFIX.resolve("hamcrest-core-1.3.jar");
 
@@ -65,9 +64,9 @@ public class ProjectZipperTest {
     final TargetProject unzip = ProjectZipper.unzipProject(destination, zip, () -> inputStream);
 
     final Path unzipFoo = unzip.rootPath.resolve(ProjectZipper.PROJECT_PREFIX)
-        .resolve("src/main/java/example/Foo.java");
+        .resolve("src/example/Foo.java");
     final Path unzipFooTest = unzip.rootPath.resolve(ProjectZipper.PROJECT_PREFIX)
-        .resolve("src/test/java/example/FooTest.java");
+        .resolve("src/example/FooTest.java");
     final Path unzipJUnit = unzip.rootPath.resolve(ProjectZipper.CLASSPATH_PREFIX)
         .resolve("junit-4.12.jar");
     final Path unzipHamcrest = unzip.rootPath.resolve(ProjectZipper.CLASSPATH_PREFIX)
