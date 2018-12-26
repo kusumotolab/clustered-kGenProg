@@ -80,13 +80,15 @@ public class Project {
     Files.walkFileTree(projectDir, new SimpleFileVisitor<Path>() {
 
       @Override
-      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+      public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs)
+          throws IOException {
         Files.delete(file);
         return FileVisitResult.CONTINUE;
       }
 
       @Override
-      public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+      public FileVisitResult postVisitDirectory(final Path dir, final IOException exc)
+          throws IOException {
         Files.delete(dir);
         return FileVisitResult.CONTINUE;
       }
@@ -97,51 +99,22 @@ public class Project {
     return projectId;
   }
 
+  public Configuration getConfiguration() {
+    return config;
+  }
+
   private Configuration unzipProject(final Path projectDir,
       final GrpcRegisterProjectRequest request) throws IOException {
 
     final Configuration config = Serializer.deserialize(request.getConfiguration());
     Files.createDirectory(projectDir);
-    final TargetProject project = ProjectUnzipper.unzipProject(projectDir, config.getTargetProject(),
-        request.getProject()::newInput);
-    final GrpcConfiguration updateConfig = updateConfig(request.getConfiguration(), project);
+    final TargetProject project = ProjectUnzipper.unzipProject(projectDir,
+        config.getTargetProject(), request.getProject()::newInput);
+    final GrpcConfiguration updateConfig = Serializer.updateConfiguration(request.getConfiguration()
+        .toBuilder(), project)
+        .build();
 
     return Serializer.deserialize(updateConfig);
-  }
-
-  /**
-   * ConfigurationのTargetProjectを更新する
-   * 
-   * @param origin もとになるConfiguration
-   * @param project 更新内容の含まれるTargetProject
-   * @return 更新されたConfiguration
-   */
-  private GrpcConfiguration updateConfig(final GrpcConfiguration origin,
-      final TargetProject project) {
-    final Iterable<String> productPaths = () -> project.getProductSourcePaths()
-        .stream()
-        .map(v -> v.path.toString())
-        .iterator();
-
-    final Iterable<String> testPaths = () -> project.getTestSourcePaths()
-        .stream()
-        .map(v -> v.path.toString())
-        .iterator();
-
-    final Iterable<String> classPaths = () -> project.getClassPaths()
-        .stream()
-        .map(v -> v.path.toString())
-        .iterator();
-
-    return origin.toBuilder()
-        .setRootDir(project.rootPath.toString())
-        .clearProductPaths()
-        .addAllProductPaths(productPaths)
-        .clearTestPaths()
-        .addAllTestPaths(testPaths)
-        .clearClassPaths()
-        .addAllClassPaths(classPaths)
-        .build();
   }
 
   private Strategies createStrategies(final Configuration configuration) {
@@ -150,7 +123,8 @@ public class Project {
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final TestExecutor testExecutor = new LocalTestExecutor(configuration);
-    final VariantSelection variantSelection = new GenerationalVariantSelection();
+    final VariantSelection variantSelection =
+        new GenerationalVariantSelection(configuration.getHeadcount());
     return new Strategies(faultLocaliztion, astConstruction, sourceCodeGeneration,
         sourceCodeValidation, testExecutor, variantSelection);
   }

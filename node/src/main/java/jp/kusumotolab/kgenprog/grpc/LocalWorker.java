@@ -17,9 +17,10 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
-  private final Path workdir = null;
+  private final Path workdir;
 
-  public LocalWorker() {
+  public LocalWorker(final Path workdir) {
+    this.workdir = workdir;
     projectMap = new ConcurrentHashMap<>();
   }
 
@@ -37,7 +38,7 @@ public class LocalWorker implements Worker {
 
       return Single.just(response);
 
-    } catch (Exception e) {
+    } catch (final Exception e) {
       return Single.error(e);
     }
   }
@@ -54,7 +55,9 @@ public class LocalWorker implements Worker {
       responseSingle = Single.just(response);
 
     } else {
-      final Gene gene = Serializer.deserialize(request.getGene());
+      final Path rootPath = project.getConfiguration()
+          .getTargetProject().rootPath;
+      final Gene gene = Serializer.deserialize(rootPath, request.getGene());
       final Single<Gene> geneSingle = Single.just(gene);
       final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
       responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
@@ -86,7 +89,7 @@ public class LocalWorker implements Worker {
       }
 
       return Single.just(response);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       return Single.error(e);
     }
   }

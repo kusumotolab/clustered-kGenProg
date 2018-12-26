@@ -27,6 +27,7 @@ import jp.kusumotolab.kgenprog.project.TestFullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.build.BuildResults;
 import jp.kusumotolab.kgenprog.project.build.EmptyBuildResults;
 import jp.kusumotolab.kgenprog.project.build.JavaBinaryObject;
+import jp.kusumotolab.kgenprog.project.factory.RawProjectFactory;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
 import jp.kusumotolab.kgenprog.project.jdt.DeleteOperation;
 import jp.kusumotolab.kgenprog.project.jdt.InsertOperation;
@@ -212,21 +213,22 @@ public final class Serializer {
     return builder.build();
   }
 
-  public static Gene deserialize(final GrpcGene gene) {
+  public static Gene deserialize(final Path rootPath, final GrpcGene gene) {
     final List<Base> bases = gene.getBaseList()
         .stream()
-        .map(Serializer::deserialize)
+        .map(v -> Serializer.deserialize(rootPath, v))
         .collect(Collectors.toList());
 
     return new Gene(bases);
   }
 
-  public static Base deserialize(final GrpcBase base) {
-    return new Base(deserialize(base.getLocation()), deserialize(base.getOperation()));
+  public static Base deserialize(final Path rootPath, final GrpcBase base) {
+    return new Base(deserialize(rootPath, base.getLocation()), deserialize(base.getOperation()));
   }
 
-  public static ASTLocation deserialize(final GrpcASTLocation location) {
-    final ProductSourcePath sourcePath = new ProductSourcePath(Paths.get(location.getSourcePath()));
+  public static ASTLocation deserialize(final Path rootPath, final GrpcASTLocation location) {
+    final ProductSourcePath sourcePath =
+        new ProductSourcePath(rootPath, Paths.get(location.getSourcePath()));
     return new RemoteJDTASTLocation(sourcePath, location.getLocationList());
   }
 
@@ -253,19 +255,22 @@ public final class Serializer {
         .stream()
         .map(Paths::get)
         .collect(Collectors.toList());
-    final Configuration.Builder builder =
-        new Configuration.Builder(rootDir, productPaths, testPaths);
-    configuration.getClassPathsList()
+
+    final List<Path> classPaths = configuration.getClassPathsList()
         .stream()
         .map(Paths::get)
-        .forEach(builder::addClassPath);
+        .collect(Collectors.toList());
+
+    final TargetProject targetProject =
+        new RawProjectFactory(rootDir, productPaths, testPaths, classPaths).create();
+    final Configuration.Builder builder = new Configuration.Builder(targetProject);
     configuration.getExecutionTestsList()
         .forEach(builder::addExecutionTest);
     builder.setTestTimeLimitSeconds(configuration.getTestTimeLimit());
     return builder.build();
   }
 
-  public static TestResults deserialize(final GrpcTestResults results) {
+  public static TestResults deserialize(final Path rootPath, final GrpcTestResults results) {
     if (results.getEmpty()) {
       return EmptyTestResults.instance;
     }
@@ -278,7 +283,7 @@ public final class Serializer {
         .forEach(testResults::add);
 
     final Map<ProductSourcePath, Set<FullyQualifiedName>> map =
-        deserialize(results.getBuildResults());
+        deserialize(rootPath, results.getBuildResults());
     testResults.setSourcePathToFQN(map);
     return testResults;
   }
@@ -302,12 +307,12 @@ public final class Serializer {
     return new Coverage(fqn, statuses);
   }
 
-  public static Map<ProductSourcePath, Set<FullyQualifiedName>> deserialize(
+  public static Map<ProductSourcePath, Set<FullyQualifiedName>> deserialize(final Path rootPath,
       final GrpcBuildResults buildResults) {
     return buildResults.getSourcePathToFQNMap()
         .entrySet()
         .stream()
-        .collect(Collectors.toMap(e -> new ProductSourcePath(Paths.get(e.getKey())),
+        .collect(Collectors.toMap(e -> new ProductSourcePath(rootPath, Paths.get(e.getKey())),
             e -> deserialize(e.getValue())));
   }
 
@@ -332,6 +337,40 @@ public final class Serializer {
         throw new IllegalArgumentException();
     }
   }
+
+  /**
+   * ConfigurationのTargetProjectを更新する
+   * 
+   * @param origin もとになるConfiguration
+   * @param project 更新内容の含まれるTargetProject
+   * @return 更新されたConfiguration
+   */
+  public static GrpcConfiguration.Builder updateConfiguration(
+      final GrpcConfiguration.Builder origin, final TargetProject project) {
+    final Iterable<String> productPaths = () -> project.getProductSourcePaths()
+        .stream()
+        .map(v -> v.path.toString())
+        .iterator();
+
+    final Iterable<String> testPaths = () -> project.getTestSourcePaths()
+        .stream()
+        .map(v -> v.path.toString())
+        .iterator();
+
+    final Iterable<String> classPaths = () -> project.getClassPaths()
+        .stream()
+        .map(v -> v.path.toString())
+        .iterator();
+
+    return origin.setRootDir(project.rootPath.toString())
+        .clearProductPaths()
+        .addAllProductPaths(productPaths)
+        .clearTestPaths()
+        .addAllTestPaths(testPaths)
+        .clearClassPaths()
+        .addAllClassPaths(classPaths);
+  }
+
 
   private static List<GrpcTreePathElement> createTreePath(final ASTNode current) {
     final ASTNode parent = current.getParent();

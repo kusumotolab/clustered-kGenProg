@@ -31,7 +31,7 @@ public class LocalWorkerTest {
 
   @Before
   public void setup() {
-    worker = spy(new LocalWorker());
+    worker = spy(new LocalWorker(null));
   }
 
 
@@ -58,10 +58,12 @@ public class LocalWorkerTest {
     assertThat(response.getProjectId()).isEqualTo(1);
 
     // Projectコンストラクタの引数の確認
-    final ArgumentCaptor<GrpcRegisterProjectRequest> captor = ArgumentCaptor.forClass(GrpcRegisterProjectRequest.class);
+    final ArgumentCaptor<GrpcRegisterProjectRequest> captor =
+        ArgumentCaptor.forClass(GrpcRegisterProjectRequest.class);
     verify(worker, times(1)).createProject(captor.capture(), anyInt());
 
-    final Configuration capturedConfig = Serializer.deserialize(captor.getValue().getConfiguration());
+    final Configuration capturedConfig = Serializer.deserialize(captor.getValue()
+        .getConfiguration());
     final TargetProject targetProject1 = capturedConfig.getTargetProject();
     assertThat(targetProject1.rootPath).isEqualTo(targetProject.rootPath);
     assertThat(targetProject1.getClassPaths()).containsAll(targetProject.getClassPaths());
@@ -86,11 +88,17 @@ public class LocalWorkerTest {
     testResults2.add(testResult2);
     testResults2.setBuildResults(EmptyBuildResults.instance);
 
+    final Configuration config =
+        new Configuration.Builder(Paths.get(""), Collections.emptyList(), Collections.emptyList())
+            .build();
+
     final Project project1 = mock(Project.class);
     when(project1.executeTest(any())).thenReturn(testResults1);
+    when(project1.getConfiguration()).thenReturn(config);
 
     final Project project2 = mock(Project.class);
     when(project2.executeTest(any())).thenReturn(testResults2);
+    when(project2.getConfiguration()).thenReturn(config);
 
     // 1回目の呼び出しでproject1, 2回目の呼び出しでproject2を返す
     doReturn(project1, project2).when(worker)

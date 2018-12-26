@@ -65,14 +65,10 @@ public class SerializerTest {
     final GrpcConfiguration grpcConfig = Serializer.serialize(config);
 
     assertThat(grpcConfig.getRootDir()).isEqualTo(rootDir.toString());
-    assertThat(grpcConfig.getProductPathsList()).containsExactly(rootDir.resolve(Src.FOO)
-            .toString(),
-        rootDir.resolve(Src.BAR)
-            .toString());
-    assertThat(grpcConfig.getTestPathsList()).containsExactly(rootDir.resolve(Src.FOO_TEST)
-            .toString(),
-        rootDir.resolve(Src.BAR_TEST)
-            .toString());
+    assertThat(grpcConfig.getProductPathsList()).containsExactly(Src.FOO.toString(),
+        Src.BAR.toString());
+    assertThat(grpcConfig.getTestPathsList()).containsExactly(Src.FOO_TEST.toString(),
+        Src.BAR_TEST.toString());
     assertThat(grpcConfig.getClassPathsList())
         .contains(rootDir.resolve("src/main/resources/junit4/junit-4.12.jar")
             .toString());
@@ -85,9 +81,9 @@ public class SerializerTest {
     final TargetProject targetProject = deserialized.getTargetProject();
     assertThat(targetProject.rootPath).isEqualTo(rootDir);
     assertThat(targetProject.getProductSourcePaths()).extracting(p -> p.path)
-        .containsExactlyElementsOf(productPaths);
+        .containsExactly(Src.FOO, Src.BAR);
     assertThat(targetProject.getTestSourcePaths()).extracting(p -> p.path)
-        .containsExactlyElementsOf(testPaths);
+        .containsExactly(Src.FOO_TEST, Src.BAR_TEST);
     assertThat(deserialized.getExecutedTests()).containsExactly("example.FooTest",
         "example.BarTest");
     assertThat(deserialized.getTestTimeLimitSeconds()).isEqualTo(10);
@@ -95,6 +91,7 @@ public class SerializerTest {
 
   @Test
   public void testSerializeGene() {
+    final Path rootPath = Paths.get(".");
     final String fileName = "A.java";
     final String source = new StringBuilder() //
         .append("class A {\n")
@@ -110,7 +107,8 @@ public class SerializerTest {
         .append("  }\n")
         .append("}\n")
         .toString();
-    final ProductSourcePath productSourcePath = new ProductSourcePath(Paths.get(fileName));
+    final ProductSourcePath productSourcePath =
+        new ProductSourcePath(rootPath, Paths.get(fileName));
     final JDTASTConstruction constructor = new JDTASTConstruction();
     final GeneratedJDTAST<ProductSourcePath> ast =
         constructor.constructAST(productSourcePath, source);
@@ -150,7 +148,7 @@ public class SerializerTest {
     assertThat(grpcBase1.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase1.getLocation()
-            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 0});
     assertThat(grpcBase1.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.DELETE);
@@ -160,7 +158,7 @@ public class SerializerTest {
     assertThat(grpcBase2.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase2.getLocation()
-            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 1});
     assertThat(grpcBase2.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.INSERT);
@@ -172,7 +170,7 @@ public class SerializerTest {
     assertThat(grpcBase3.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase3.getLocation()
-            .getLocationList(),
+        .getLocationList(),
         new String[] {"types", "bodyDeclarations", "body", "statements", "thenStatement",
             "statements"},
         new int[] {0, 0, 0, 1, -1, 0});
@@ -182,7 +180,7 @@ public class SerializerTest {
         .getStatement()).isEqualTo("return -n;\n");
 
     // デシリアライズの実行
-    final Gene deserialized = Serializer.deserialize(grpcGene);
+    final Gene deserialized = Serializer.deserialize(rootPath, grpcGene);
     assertThat(deserialized.getBases()).hasSize(3);
 
     // delete
@@ -209,8 +207,7 @@ public class SerializerTest {
 
     assertThat(deserializedBase2.getOperation()).isInstanceOf(InsertOperation.class);
     assertThat(deserializedBase2.getOperation()
-        .getTargetSnippet())
-        .isEqualTo(statements.get(6)
+        .getTargetSnippet()).isEqualTo(statements.get(6)
             .toString());
 
     // Replace
@@ -226,7 +223,7 @@ public class SerializerTest {
     assertThat(deserializedBase3.getOperation()).isInstanceOf(ReplaceOperation.class);
     assertThat(deserializedBase3.getOperation()
         .getTargetSnippet()).isEqualTo(statements.get(8)
-        .toString());
+            .toString());
   }
 
   private void assertTreePathElement(final List<GrpcTreePathElement> target, final String[] id,
@@ -291,16 +288,14 @@ public class SerializerTest {
 
     // BuildResults
     final GrpcBuildResults grpcBuildResults = grpcTestResults.getBuildResults();
-    final Path foo = Paths.get("../main/example/BuildSuccess01/src/example/Foo.java");
-    final Path fooTest = Paths.get("../main/example/BuildSuccess01/src/example/FooTest.java");
-    assertThat(grpcBuildResults.getSourcePathToFQNMap()).containsOnlyKeys(foo.toString(),
-        fooTest.toString());
+    assertThat(grpcBuildResults.getSourcePathToFQNMap()).containsOnlyKeys(Src.FOO.toString(),
+        Src.FOO_TEST.toString());
     final GrpcFullyQualifiedNames grpcFullyQualifiedNames = grpcBuildResults.getSourcePathToFQNMap()
-        .get(foo.toString());
+        .get(Src.FOO.toString());
     assertThat(grpcFullyQualifiedNames.getNameList()).containsExactly("example.Foo");
 
     // デシリアライズ実行
-    final TestResults deserialized = Serializer.deserialize(grpcTestResults);
+    final TestResults deserialized = Serializer.deserialize(rootPath, grpcTestResults);
     assertThat(deserialized).isNotSameAs(EmptyTestResults.instance);
 
     assertThat(deserialized.getExecutedTestFQNs()).containsExactlyInAnyOrder( //

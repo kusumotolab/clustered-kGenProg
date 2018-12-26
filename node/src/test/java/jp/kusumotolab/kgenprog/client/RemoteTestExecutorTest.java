@@ -48,6 +48,9 @@ public class RemoteTestExecutorTest {
 
   private String name;
   private RemoteTestExecutor remoteTestExecutor;
+  private TargetProject targetProject;
+  private Configuration config;
+
 
   @Before
   public void setup() {
@@ -56,14 +59,15 @@ public class RemoteTestExecutorTest {
     final ManagedChannel channel = grpcCleanupRule.register(InProcessChannelBuilder.forName(name)
         .directExecutor()
         .build());
-    remoteTestExecutor = new RemoteTestExecutor(channel);
+
+    final Path rootPath = Paths.get("../main/example/BuildSuccess01");
+    targetProject = TargetProjectFactory.create(rootPath);
+    config = new Configuration.Builder(targetProject).build();
+    remoteTestExecutor = new RemoteTestExecutor(config, channel);
   }
 
   @Test
   public void testExec() throws IOException {
-    final Path rootPath = Paths.get("../main/example/BuildSuccess01");
-    final TargetProject targetProject = TargetProjectFactory.create(rootPath);
-    final Configuration config = new Configuration.Builder(targetProject).build();
     setupCoordinator(config);
 
     final GeneratedSourceCode source = TestUtil.createGeneratedSourceCode(targetProject);
@@ -112,7 +116,7 @@ public class RemoteTestExecutorTest {
     doAnswer(invocation -> {
       final GrpcExecuteTestRequest request = invocation.getArgument(0);
       final StreamObserver<GrpcExecuteTestResponse> responseObserver = invocation.getArgument(1);
-      final Gene gene = Serializer.deserialize(request.getGene());
+      final Gene gene = Serializer.deserialize(targetProject.rootPath, request.getGene());
       final TestResults results = project.executeTest(gene);
       final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
           .setStatus(Coordinator.STATUS_SUCCESS)
@@ -126,3 +130,4 @@ public class RemoteTestExecutorTest {
         .executeTest(any(), any());
   }
 }
+

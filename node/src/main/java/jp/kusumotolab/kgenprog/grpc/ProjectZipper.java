@@ -101,7 +101,7 @@ public class ProjectZipper {
     final List<Path> productPaths = convertProductSourcePaths();
     final List<Path> testPaths = convertTestSourcePaths();
 
-    return new RawProjectFactory(Paths.get("."), productPaths, testPaths, classPaths).create();
+    return new RawProjectFactory(PROJECT_PREFIX, productPaths, testPaths, classPaths).create();
   }
 
   /**
@@ -199,34 +199,22 @@ public class ProjectZipper {
   }
 
   /**
-   * ProductSourcePathsをZIPファイル中でのパスに変換する
+   * ProductSourcePathsをPathのリストに変換する
    */
   private List<Path> convertProductSourcePaths() {
     return project.getProductSourcePaths()
         .stream()
-        .map(v -> {
-          try {
-            return createProjectPath(v.path.toRealPath());
-          } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-          }
-        })
+        .map(v -> v.path)
         .collect(Collectors.toList());
   }
 
   /**
-   * TestSourcePathsをZIPファイル中でのパスに変換する
+   * TestSourcePathsをPathのリストに変換する
    */
   private List<Path> convertTestSourcePaths() {
     return project.getTestSourcePaths()
         .stream()
-        .map(v -> {
-          try {
-            return createProjectPath(v.path.toRealPath());
-          } catch (final IOException e) {
-            throw new UncheckedIOException(e);
-          }
-        })
+        .map(v -> v.path)
         .collect(Collectors.toList());
   }
 
