@@ -9,6 +9,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
@@ -35,10 +36,10 @@ public class LocalWorkerTest {
 
 
   @Test
-  public void testRegisterProject() {
+  public void testRegisterProject() throws IOException {
     final Project project = mock(Project.class);
     doReturn(project).when(worker)
-        .createProject(anyInt(), any());
+        .createProject(any(), anyInt());
 
     final Path rootPath = Paths.get("../main/example/BuildSuccess01");
     final TargetProject targetProject = TargetProjectFactory.create(rootPath);
@@ -57,10 +58,10 @@ public class LocalWorkerTest {
     assertThat(response.getProjectId()).isEqualTo(1);
 
     // Projectコンストラクタの引数の確認
-    final ArgumentCaptor<Configuration> captor = ArgumentCaptor.forClass(Configuration.class);
-    verify(worker, times(1)).createProject(anyInt(), captor.capture());
+    final ArgumentCaptor<GrpcRegisterProjectRequest> captor = ArgumentCaptor.forClass(GrpcRegisterProjectRequest.class);
+    verify(worker, times(1)).createProject(captor.capture(), anyInt());
 
-    final Configuration capturedConfig = captor.getValue();
+    final Configuration capturedConfig = Serializer.deserialize(captor.getValue().getConfiguration());
     final TargetProject targetProject1 = capturedConfig.getTargetProject();
     assertThat(targetProject1.rootPath).isEqualTo(targetProject.rootPath);
     assertThat(targetProject1.getClassPaths()).containsAll(targetProject.getClassPaths());
@@ -71,7 +72,7 @@ public class LocalWorkerTest {
   }
 
   @Test
-  public void testExecuteTest() {
+  public void testExecuteTest() throws IOException {
     // モックの作成
     final TestResult testResult1 =
         new TestResult(new TargetFullyQualifiedName("A"), false, Collections.emptyMap());
@@ -93,7 +94,7 @@ public class LocalWorkerTest {
 
     // 1回目の呼び出しでproject1, 2回目の呼び出しでproject2を返す
     doReturn(project1, project2).when(worker)
-        .createProject(anyInt(), any());
+        .createProject(any(), anyInt());
 
     final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
         .build();
@@ -127,10 +128,10 @@ public class LocalWorkerTest {
   }
 
   @Test
-  public void testUnregisterProject() {
+  public void testUnregisterProject() throws IOException {
     final Project project = mock(Project.class);
     doReturn(project).when(worker)
-        .createProject(anyInt(), any());
+        .createProject(any(), anyInt());
 
     // プロジェクトを登録する
     final GrpcRegisterProjectRequest registerRequest = GrpcRegisterProjectRequest.newBuilder()

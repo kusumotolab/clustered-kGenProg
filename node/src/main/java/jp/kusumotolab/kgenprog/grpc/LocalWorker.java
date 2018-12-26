@@ -1,9 +1,10 @@
 package jp.kusumotolab.kgenprog.grpc;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import io.reactivex.Single;
-import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 
@@ -16,6 +17,7 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
+  private final Path workdir = null;
 
   public LocalWorker() {
     projectMap = new ConcurrentHashMap<>();
@@ -24,17 +26,20 @@ public class LocalWorker implements Worker {
   @Override
   public Single<GrpcRegisterProjectResponse> registerProject(
       final GrpcRegisterProjectRequest request, final int projectId) {
+    try {
+      final Project project = createProject(request, projectId);
+      projectMap.put(projectId, project);
 
-    final Configuration config = Serializer.deserialize(request.getConfiguration());
-    final Project project = createProject(projectId, config);
-    projectMap.put(projectId, project);
+      final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
+          .setProjectId(projectId)
+          .setStatus(Coordinator.STATUS_SUCCESS)
+          .build();
 
-    final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-        .setProjectId(projectId)
-        .setStatus(Coordinator.STATUS_SUCCESS)
-        .build();
+      return Single.just(response);
 
-    return Single.just(response);
+    } catch (Exception e) {
+      return Single.error(e);
+    }
   }
 
   @Override
@@ -64,23 +69,26 @@ public class LocalWorker implements Worker {
   @Override
   public Single<GrpcUnregisterProjectResponse> unregisterProject(
       final GrpcUnregisterProjectRequest request) {
+    try {
+      final GrpcUnregisterProjectResponse response;
+      final Project project = projectMap.remove(request.getProjectId());
+      if (project == null) {
+        // プロジェクトが見つからなかった場合、実行失敗メッセージを返す
+        response = GrpcUnregisterProjectResponse.newBuilder()
+            .setStatus(Coordinator.STATUS_FAILED)
+            .build();
 
-    final GrpcUnregisterProjectResponse response;
-    final Project project = projectMap.remove(request.getProjectId());
-    if (project == null) {
-      // プロジェクトが見つからなかった場合、実行失敗メッセージを返す
-      response = GrpcUnregisterProjectResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_FAILED)
-          .build();
+      } else {
+        project.unregister();
+        response = GrpcUnregisterProjectResponse.newBuilder()
+            .setStatus(Coordinator.STATUS_SUCCESS)
+            .build();
+      }
 
-    } else {
-      project.unregister();
-      response = GrpcUnregisterProjectResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
-          .build();
+      return Single.just(response);
+    } catch (Exception e) {
+      return Single.error(e);
     }
-
-    return Single.just(response);
   }
 
   /**
@@ -88,11 +96,15 @@ public class LocalWorker implements Worker {
    * 
    * テストの際にモックとして差し替えることを想定している
    * 
-   * @param projectId プロジェクトID
-   * @param config プロジェクトのConfiguration
+   * @param request プロジェクトID
+   * @param projectId プロジェクトのConfiguration
    * @return 生成されたプロジェクト
+   * @throws IOException
    */
-  protected Project createProject(final int projectId, final Configuration config) {
-    return new Project(projectId, config);
+  protected Project createProject(final GrpcRegisterProjectRequest request, final int projectId)
+      throws IOException {
+    return new Project(workdir, request, projectId);
   }
+
+
 }
