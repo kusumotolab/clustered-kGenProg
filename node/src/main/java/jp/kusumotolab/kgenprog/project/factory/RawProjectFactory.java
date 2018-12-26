@@ -15,7 +15,7 @@ public class RawProjectFactory implements ProjectFactory {
   private final List<ClassPath> classPaths;
 
   public RawProjectFactory(final Path rootPath, final List<Path> pathsForProductSource,
-      final List<Path> pathsForTestSource, List<Path> pathsForClass) {
+      final List<Path> pathsForTestSource, final List<Path> pathsForClass) {
     this.rootPath = rootPath;
     this.productSourcePaths = pathsForProductSource.stream()
         .map(ProductSourcePath::new)

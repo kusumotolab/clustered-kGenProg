@@ -21,7 +21,6 @@ public class ProjectZipperTest {
 
   @Test
   public void test() throws IOException {
-    // Mavenで記述された題材の読み込み
     final Path rootPath = Paths.get("../main/example/BuildSuccess01");
     final TargetProject targetProject = TargetProjectFactory.create(rootPath);
     final Path originFoo = targetProject.getProductSourcePaths()
@@ -61,7 +60,7 @@ public class ProjectZipperTest {
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
     final Path destination = tempFolder.newFolder()
         .toPath();
-    final TargetProject unzip = ProjectZipper.unzipProject(destination, zip, () -> inputStream);
+    final TargetProject unzip = ProjectUnzipper.unzipProject(destination, zip, () -> inputStream);
 
     final Path unzipFoo = unzip.rootPath.resolve(ProjectZipper.PROJECT_PREFIX)
         .resolve("src/example/Foo.java");
