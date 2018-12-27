@@ -58,11 +58,11 @@ public class RemoteTestExecutor implements TestExecutor {
         .setProjectId(projectId.get())
         .setGene(Serializer.serialize(variant.getGene()))
         .build();
-    log.info("executeTest request");
+    log.debug("executeTest request");
     log.debug(request.toString());
 
     final GrpcExecuteTestResponse response = blockingStub.executeTest(request);
-    log.info("executeTest response");
+    log.debug("executeTest response");
     log.debug(response.toString());
 
     if (response.getStatus() == Coordinator.STATUS_FAILED) {
