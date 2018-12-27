@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -87,20 +88,22 @@ public class ProjectUnzipper {
 
     final List<Path> productPaths = project.getProductSourcePaths()
         .stream()
-        .map(v -> destination.resolve(v.path))
+        .map(v -> v.path)
         .collect(Collectors.toList());
 
     final List<Path> testPaths = project.getTestSourcePaths()
         .stream()
-        .map(v -> destination.resolve(v.path))
+        .map(v -> v.path)
         .collect(Collectors.toList());
 
     final List<Path> classPaths = project.getClassPaths()
         .stream()
-        .map(v -> destination.resolve(v.path))
+        .map(v -> Paths.get(".")
+            .resolve(destination)
+            .resolve(v.path))
         .collect(Collectors.toList());
-
-    return new RawProjectFactory(destination, productPaths, testPaths, classPaths).create();
+    return new RawProjectFactory(destination.resolve(ProjectZipper.PROJECT_PREFIX), productPaths,
+        testPaths, classPaths).create();
   }
 
   /**

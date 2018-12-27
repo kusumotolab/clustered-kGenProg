@@ -43,17 +43,17 @@ public class ClientLauncher {
         new RouletteStatementSelection(random);
     final Mutation mutation = new RandomMutation(config.getMutationGeneratingCount(), random,
         rouletteStatementSelection, config.getScope());
-    final Crossover crossover = new SinglePointCrossover(random,
-        config.getCrossoverGeneratingCount());
+    final Crossover crossover =
+        new SinglePointCrossover(random, config.getCrossoverGeneratingCount());
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
-    final TestExecutor testExecutor = new RemoteTestExecutor("localhost", 50051);
+    final TestExecutor testExecutor = new RemoteTestExecutor(config, "localhost", 50051);
     final PatchGenerator patchGenerator = new PatchGenerator();
 
-    final KGenProgMain kGenProgMain = new KGenProgMain(config, faultLocalization, mutation,
-        crossover, sourceCodeGeneration, sourceCodeValidation, variantSelection, testExecutor,
-        patchGenerator);
+    final KGenProgMain kGenProgMain =
+        new KGenProgMain(config, faultLocalization, mutation, crossover, sourceCodeGeneration,
+            sourceCodeValidation, variantSelection, testExecutor, patchGenerator);
 
     kGenProgMain.run();
   }
