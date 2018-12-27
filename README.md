@@ -1,8 +1,25 @@
-# clustered-kGenProg
+[![CircleCI](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master.svg?style=svg)](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master)
 
-## サーバー起動
-./node/build/install/node/bin/kGenProg-server
+# clustered kGenProg
 
-## クライアント起動
-./node/build/install/node/bin/kGenProg-client [name]
+kGenProg on a Computer Cluster
 
+## How to build
+
+```
+git clone https://github.com/kusumotolab/clustered-kGenProg.git
+cd clustered-kGenProg
+./gradlew installDist
+```
+
+## Run Server
+
+```
+./node/build/install/node/bin/kGenProg-coordinator
+```
+
+## Run Client
+
+```
+./node/build/install/node/bin/kGenProg-client
+```
