@@ -90,7 +90,7 @@ public class ProjectZipper {
     classPaths = new ArrayList<>();
   }
 
-  public TargetProject zip() throws IOException {
+  private TargetProject zip() throws IOException {
     try (final ZipOutputStream zos = new ZipOutputStream(stream.get())) {
       zipOutputStream = zos;
 

@@ -39,7 +39,7 @@ public class ProjectUnzipper {
 
 
   /**
-   * {@link #zipProject(TargetProject, Supplier)} によって生成されたZIPファイルを展開する
+   * {@link ProjectZipper#zipProject(TargetProject, Supplier)} によって生成されたZIPファイルを展開する
    * 
    * @param destination 展開先ディレクトリ
    * @param project 展開対象プロジェクト
@@ -73,7 +73,7 @@ public class ProjectUnzipper {
     buffer = new byte[BUFFER_SIZE];
   }
 
-  public TargetProject unzip() throws IOException {
+  private TargetProject unzip() throws IOException {
     int entryCnt = 0;
     try (final ZipInputStream zis = new ZipInputStream(stream.get())) {
       zipInputStream = zis;
