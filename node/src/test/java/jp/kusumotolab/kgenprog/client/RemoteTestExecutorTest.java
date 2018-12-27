@@ -9,14 +9,19 @@ import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST02;
 import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST03;
 import static jp.kusumotolab.kgenprog.testutil.ExampleAlias.Fqn.FOO_TEST04;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,6 +37,10 @@ import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.grpc.Coordinator;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
 import jp.kusumotolab.kgenprog.grpc.Serializer;
 import jp.kusumotolab.kgenprog.project.GeneratedSourceCode;
@@ -46,13 +55,16 @@ public class RemoteTestExecutorTest {
   @Rule
   public final GrpcCleanupRule grpcCleanupRule = new GrpcCleanupRule();
 
+  private Coordinator coordinator;
   private String name;
   private RemoteTestExecutor remoteTestExecutor;
   private TargetProject targetProject;
   private Configuration config;
 
+  private static final int PROJECT_ID = 100;
+
   @Before
-  public void setup() {
+  public void setup() throws IOException {
     name = InProcessServerBuilder.generateName();
 
     final ManagedChannel channel = grpcCleanupRule.register(InProcessChannelBuilder.forName(name)
@@ -63,12 +75,20 @@ public class RemoteTestExecutorTest {
     targetProject = TargetProjectFactory.create(rootPath);
     config = new Configuration.Builder(targetProject).build();
     remoteTestExecutor = new RemoteTestExecutor(config, channel);
+    remoteTestExecutor.setProjectId(0);
+    setupCoordinator(config);
   }
 
   @Test
-  public void testExec() throws IOException {
-    setupCoordinator(config);
+  public void testRegister() {
+    remoteTestExecutor.initialize();
+    verify(coordinator, times(1)).registerProject(any(), any());
+    assertThat(remoteTestExecutor.getProjectId()).isEqualTo(PROJECT_ID);
+  }
 
+  @Test
+  public void testExec() {
+    remoteTestExecutor.initialize();
     final GeneratedSourceCode source = TestUtil.createGeneratedSourceCode(targetProject);
     final Variant variant = mock(Variant.class);
     when(variant.getGeneratedSourceCode()).thenReturn(source);
@@ -100,8 +120,18 @@ public class RemoteTestExecutorTest {
         COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
   }
 
+  @Test
+  public void testUnregister() {
+    remoteTestExecutor.initialize();
+    assertThat(remoteTestExecutor.getProjectId()).isNotEqualTo(-1);
+
+    remoteTestExecutor.finish();
+    verify(coordinator, times(1)).unregisterProject(any(), any());
+    assertThat(remoteTestExecutor.getProjectId()).isEqualTo(-1);
+  }
+
   private void setupCoordinator(final Configuration config) throws IOException {
-    final Coordinator coordinator = mock(Coordinator.class);
+    coordinator = mock(Coordinator.class);
 
     final Server server = InProcessServerBuilder.forName(name)
         .directExecutor()
@@ -112,6 +142,7 @@ public class RemoteTestExecutorTest {
 
     final Project project = new Project(0, config);
 
+    // テストを実行
     doAnswer(invocation -> {
       final GrpcExecuteTestRequest request = invocation.getArgument(0);
       final StreamObserver<GrpcExecuteTestResponse> responseObserver = invocation.getArgument(1);
@@ -127,6 +158,32 @@ public class RemoteTestExecutorTest {
       return null;
     }).when(coordinator)
         .executeTest(any(), any());
+
+    // 登録のモック処理
+    doAnswer(invocation -> {
+      final StreamObserver<GrpcRegisterProjectResponse> responseObserver = invocation.getArgument(
+          1);
+      final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
+          .setStatus(Coordinator.STATUS_SUCCESS)
+          .setProjectId(PROJECT_ID)
+          .build();
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      return null;
+    }).when(coordinator)
+        .registerProject(any(), any());
+
+    // 登録解除のモック処理
+    doAnswer(invocation -> {
+      final StreamObserver<GrpcUnregisterProjectResponse> responseObserver = invocation.getArgument(
+          1);
+      final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
+          .setStatus(Coordinator.STATUS_SUCCESS)
+          .build();
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      return null;
+    }).when(coordinator).unregisterProject(any(), any());
   }
 }
 

@@ -45,7 +45,12 @@ public class RemoteTestExecutor implements TestExecutor {
 
   @Override
   public TestResults exec(final Variant variant) {
+    if (!projectId.isPresent()) {
+      return EmptyTestResults.instance;
+    }
+
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+        .setProjectId(projectId.get())
         .setGene(Serializer.serialize(variant.getGene()))
         .build();
     final GrpcExecuteTestResponse response = blockingStub.executeTest(request);
@@ -89,5 +94,17 @@ public class RemoteTestExecutor implements TestExecutor {
     if (response.getStatus() == Coordinator.STATUS_FAILED) {
       System.exit(1);
     }
+    projectId = Optional.empty();
+  }
+
+
+  // 以下テスト用アクセッサ
+
+  void setProjectId(final Integer projectId) {
+    this.projectId = Optional.ofNullable(projectId);
+  }
+
+  int getProjectId() {
+    return projectId.isPresent() ? projectId.get() : -1;
   }
 }
