@@ -1,6 +1,8 @@
 package jp.kusumotolab.kgenprog.grpc;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class CoordinatorLauncher {
 
@@ -18,7 +20,10 @@ public class CoordinatorLauncher {
   }
 
   public void launch(final ClusterConfiguration config) throws IOException, InterruptedException {
-    final Worker worker = new LocalWorker();
+    final Path workerDir = config.getWorkingDir()
+        .resolve("worker1");
+    Files.createDirectories(workerDir);
+    final Worker worker = new LocalWorker(config.getWorkingDir());
     final Coordinator coordinator = new Coordinator(config, worker);
     coordinator.start();
   }
