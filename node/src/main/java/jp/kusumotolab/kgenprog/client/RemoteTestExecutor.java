@@ -131,7 +131,7 @@ public class RemoteTestExecutor implements TestExecutor {
     this.projectId = Optional.ofNullable(projectId);
   }
 
-  int getProjectId() {
-    return projectId.isPresent() ? projectId.get() : -1;
+  Optional<Integer> getProjectId() {
+    return projectId;
   }
 }

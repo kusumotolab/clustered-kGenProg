@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -78,7 +79,10 @@ public class RemoteTestExecutorTest {
   public void testRegister() {
     remoteTestExecutor.initialize();
     verify(coordinator, times(1)).registerProject(any(), any());
-    assertThat(remoteTestExecutor.getProjectId()).isEqualTo(PROJECT_ID);
+
+    final Optional<Integer> projectId = remoteTestExecutor.getProjectId();
+    assertThat(projectId).isPresent();
+    assertThat(projectId.get()).isEqualTo(PROJECT_ID);
   }
 
   @Test
@@ -118,11 +122,11 @@ public class RemoteTestExecutorTest {
   @Test
   public void testUnregister() {
     remoteTestExecutor.initialize();
-    assertThat(remoteTestExecutor.getProjectId()).isNotEqualTo(-1);
+    assertThat(remoteTestExecutor.getProjectId()).isPresent();
 
     remoteTestExecutor.finish();
     verify(coordinator, times(1)).unregisterProject(any(), any());
-    assertThat(remoteTestExecutor.getProjectId()).isEqualTo(-1);
+    assertThat(remoteTestExecutor.getProjectId()).isNotPresent();
   }
 
   private void setupCoordinator(final Configuration config) throws IOException {
