@@ -68,7 +68,7 @@ public class ClusterConfiguration {
         parser.parseArgument(args);
 
 
-        if (needsParseConfigFile(args)) {
+        if (builder.needsParseConfigFile(args)) {
           builder.parseConfigFile();
 
           // Overwrite config values with ones from CLI
@@ -101,9 +101,9 @@ public class ClusterConfiguration {
       return this;
     }
 
-    private static boolean needsParseConfigFile(final String[] args) {
-      return args.length == 0 || Arrays.asList(args)
-          .contains("--config");
+    private boolean needsParseConfigFile(final String[] args) {
+      return Arrays.asList(args)
+          .contains("--config") || (args.length == 0 && Files.isRegularFile(configPath));
     }
 
     private void parseConfigFile() throws InvalidValueException, NoSuchFileException {

@@ -79,23 +79,23 @@ sourceSets {
 
 startScripts.enabled = false
 
-task helloWorldServer(type: CreateStartScripts) {
-    mainClassName = 'jp.kusumotolab.kgenprog.grpc.HelloWorldServer'
-    applicationName = 'kGenProg-server'
+task kGenProgCoordinator(type: CreateStartScripts) {
+    mainClassName = 'jp.kusumotolab.kgenprog.grpc.CoordinatorLauncher'
+    applicationName = 'kGenProg-coordinator'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
-task helloWorldClient(type: CreateStartScripts) {
-    mainClassName = 'jp.kusumotolab.kgenprog.grpc.HelloWorldClient'
+task kGenProgClient(type: CreateStartScripts) {
+    mainClassName = 'jp.kusumotolab.kgenprog.client.ClientLauncher'
     applicationName = 'kGenProg-client'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
 applicationDistribution.into('bin') {
-    from(helloWorldServer)
-    from(helloWorldClient)
+    from(kGenProgCoordinator)
+    from(kGenProgClient)
     fileMode = 0755
 }
 
