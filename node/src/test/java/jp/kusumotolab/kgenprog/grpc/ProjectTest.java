@@ -74,8 +74,6 @@ public class ProjectTest {
     when(variant.getGeneratedSourceCode()).thenReturn(modifiedCode);
     final TestExecutor executor = new LocalTestExecutor(config);
     localResults = executor.exec(variant);
-
-
   }
 
   @Test
@@ -91,7 +89,6 @@ public class ProjectTest {
     remoteResults.getExecutedTestFQNs()
         .forEach(
             v -> assertTestResult(remoteResults.getTestResult(v), localResults.getTestResult(v)));
-
   }
 
   @Test

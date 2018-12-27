@@ -51,7 +51,6 @@ public class RemoteTestExecutorTest {
   private TargetProject targetProject;
   private Configuration config;
 
-
   @Before
   public void setup() {
     name = InProcessServerBuilder.generateName();

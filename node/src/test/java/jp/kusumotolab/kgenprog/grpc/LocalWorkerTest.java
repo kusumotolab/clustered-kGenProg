@@ -34,7 +34,6 @@ public class LocalWorkerTest {
     worker = spy(new LocalWorker(null));
   }
 
-
   @Test
   public void testRegisterProject() throws IOException {
     final Project project = mock(Project.class);
