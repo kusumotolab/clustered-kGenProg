@@ -19,10 +19,10 @@ public class Coordinator extends KGenProgClusterGrpc.KGenProgClusterImplBase {
   private final AtomicInteger idCounter;
   private final Worker worker;
 
-  public Coordinator(final int port, final Worker worker) {
+  public Coordinator(final ClusterConfiguration config, final Worker worker) {
     this.worker = worker;
 
-    server = ServerBuilder.forPort(port)
+    server = ServerBuilder.forPort(config.getPort())
         .addService(this)
         .build();
 

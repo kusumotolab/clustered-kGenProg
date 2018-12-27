@@ -39,8 +39,10 @@ public class CoordinatorTest {
 
   @Before
   public void setup() throws IOException {
+    final ClusterConfiguration config = new ClusterConfiguration.Builder().build();
+
     worker = mock(Worker.class);
-    coordinator = new Coordinator(50000, worker);
+    coordinator = new Coordinator(config, worker);
     grpcCleanup.register(serverBuilder.addService(coordinator)
         .build()
         .start());
