@@ -4,6 +4,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -26,6 +28,8 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 public class RemoteTestExecutor implements TestExecutor {
 
+  private static final Logger log = LoggerFactory.getLogger(RemoteTestExecutor.class);
+
   private final KGenProgClusterBlockingStub blockingStub;
   private final Configuration config;
   private Optional<Integer> projectId = Optional.empty();
@@ -46,6 +50,7 @@ public class RemoteTestExecutor implements TestExecutor {
   @Override
   public TestResults exec(final Variant variant) {
     if (!projectId.isPresent()) {
+      log.error("project id is not present");
       return EmptyTestResults.instance;
     }
 
@@ -53,8 +58,15 @@ public class RemoteTestExecutor implements TestExecutor {
         .setProjectId(projectId.get())
         .setGene(Serializer.serialize(variant.getGene()))
         .build();
+    log.info("executeTest request");
+    log.debug(request.toString());
+
     final GrpcExecuteTestResponse response = blockingStub.executeTest(request);
+    log.info("executeTest response");
+    log.debug(response.toString());
+
     if (response.getStatus() == Coordinator.STATUS_FAILED) {
+      log.error("failed to executeTest");
       return EmptyTestResults.instance;
     }
     final Path rootPath = config.getTargetProject().rootPath;
@@ -67,17 +79,25 @@ public class RemoteTestExecutor implements TestExecutor {
     try {
       ProjectZipper.zipProject(config.getTargetProject(), () -> stream);
     } catch (final IOException e) {
+      log.error("failed to zip project");
       e.printStackTrace();
+      throw new RuntimeException("failed to zip project");
     }
     final ByteString zip = ByteString.copyFrom(stream.toByteArray());
     final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
         .setConfiguration(Serializer.serialize(config))
         .setProject(zip)
         .build();
+    log.debug("registerProject request");
+    log.debug(request.toString());
+
     final GrpcRegisterProjectResponse response = blockingStub.registerProject(request);
+    log.debug("registerProject response");
+    log.debug(response.toString());
+
     if (response.getStatus() == Coordinator.STATUS_FAILED) {
-      System.exit(1);
-      return;
+      log.error("failed to register project");
+      throw new RuntimeException("failed to register project");
     }
     projectId = Optional.of(response.getProjectId());
   }
@@ -85,14 +105,21 @@ public class RemoteTestExecutor implements TestExecutor {
   @Override
   public void finish() {
     if (!projectId.isPresent()) {
+      log.error("project id is not present");
       return;
     }
     final GrpcUnregisterProjectRequest request = GrpcUnregisterProjectRequest.newBuilder()
         .setProjectId(projectId.get())
         .build();
+    log.debug("unregisterProject request");
+    log.debug(request.toString());
+
     final GrpcUnregisterProjectResponse response = blockingStub.unregisterProject(request);
+    log.debug("unregisterProject response");
+    log.debug(response.toString());
+
     if (response.getStatus() == Coordinator.STATUS_FAILED) {
-      System.exit(1);
+      log.error("failed to unregister project");
     }
     projectId = Optional.empty();
   }
