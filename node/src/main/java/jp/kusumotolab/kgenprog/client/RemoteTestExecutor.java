@@ -79,8 +79,7 @@ public class RemoteTestExecutor implements TestExecutor {
     try {
       ProjectZipper.zipProject(config.getTargetProject(), () -> stream);
     } catch (final IOException e) {
-      log.error("failed to zip project");
-      e.printStackTrace();
+      log.error("failed to zip project", e);
       throw new RuntimeException("failed to zip project");
     }
     final ByteString zip = ByteString.copyFrom(stream.toByteArray());
