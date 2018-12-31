@@ -26,7 +26,7 @@ public class ClientLauncher {
 
   public static void main(final String[] args) {
     try {
-      final Configuration config = ClientConfiguration.Builder.buildFromCmdLineArgs(args);
+      final ClientConfiguration config = ClientConfiguration.Builder.buildFromCmdLineArgs(args);
       final ClientLauncher launcher = new ClientLauncher();
       launcher.launch(config);
     } catch (final IllegalArgumentException e) {
@@ -34,7 +34,9 @@ public class ClientLauncher {
     }
   }
 
-  public void launch(final Configuration config) {
+  public void launch(final ClientConfiguration clientConfig) {
+    Configuration config = clientConfig.getConfig();
+    System.out.println(clientConfig.getHost() + ":" + clientConfig.getPort());
     setLogLevel(config.getLogLevel());
 
     final FaultLocalization faultLocalization = new Ochiai();
@@ -48,7 +50,7 @@ public class ClientLauncher {
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
-    final TestExecutor testExecutor = new RemoteTestExecutor(config, "localhost", 50051);
+    final TestExecutor testExecutor = new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
     final PatchGenerator patchGenerator = new PatchGenerator();
 
     final KGenProgMain kGenProgMain =

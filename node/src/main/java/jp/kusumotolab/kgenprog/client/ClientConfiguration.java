@@ -1,67 +1,70 @@
 package jp.kusumotolab.kgenprog.client;
 
-import com.electronwill.nightconfig.core.conversion.InvalidValueException;
-import com.electronwill.nightconfig.core.conversion.PreserveNotNull;
-import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.util.List;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import com.electronwill.nightconfig.core.conversion.InvalidValueException;
 import jp.kusumotolab.kgenprog.Configuration;
-import jp.kusumotolab.kgenprog.project.factory.TargetProjectFactory;
-import jp.kusumotolab.kgenprog.project.factory.JUnitLibraryResolver.JUnitVersion;
 
-public class ClientConfiguration extends Configuration {
-  
+/**
+ * kGenProg のオプションに {@code --host <host>} と {@code --port <port>} を追加したもの．
+ * 従来の kGenProg のオプションは {@code --kgp-args <args...>} として記述する．
+ * <br>
+ * Note: 現状 kGenProg オプションにスペースが入っているとバグる．
+ * <pre>
+ * --kgp-args '--config "/path/containing/space/kGenProg settings.toml"'
+ *                                                      ^ Cannot use spaces!
+ * </pre>
+ * 
+ * @author h-matsuo
+ *
+ */
+public class ClientConfiguration {
+
   public static final String DEFAULT_HOST = "localhost";
   public static final int DEFAULT_PORT = 50051;
-  
-  private ClientConfiguration(final Builder builder) {
-    super(builder);
+
+  private final Configuration config;
+  private final String host;
+  private final int port;
+
+  protected ClientConfiguration(final Builder builder) {
+    config = builder.config;
+    host = builder.host;
+    port = builder.port;
+  }
+
+  public Configuration getConfig() {
+    return config;
   }
   
-  public static class Builder extends Configuration.Builder {
+  public String getHost() {
+	  return host;
+  }
+  
+  public int getPort() {
+	  return port;
+  }
+
+  public static class Builder {
     
-    @com.electronwill.nightconfig.core.conversion.Path("host")
-    @PreserveNotNull
+    private Configuration config;    
     private String host = DEFAULT_HOST;
-    
-    @com.electronwill.nightconfig.core.conversion.Path("port")
-	@PreserveNotNull
-	private int port = DEFAULT_PORT;
-    
-    private Builder() {
-      super();
-    }
-	
+    private int port = DEFAULT_PORT;
+    private String[] kgpArgs;
+
+    private Builder() {}
+
     public static ClientConfiguration buildFromCmdLineArgs(final String[] args)
         throws IllegalArgumentException {
-      
+
       final Builder builder = new Builder();
       final CmdLineParser parser = new CmdLineParser(builder);
-       
+
       try {
         parser.parseArgument(args);
-        final List<String> executionTestsFromCmdLine = builder.executionTests;
-        final List<Path> classPathsFromCmdLine = builder.classPaths;
-
-        if (needsParseConfigFile(args)) {
-          builder.parseConfigFile();
-
-          // Overwrite config values with ones from CLI
-          parser.parseArgument(args);
-          if (!executionTestsFromCmdLine.isEmpty()) {
-            builder.executionTests.retainAll(executionTestsFromCmdLine);
-          }
-          if (!classPathsFromCmdLine.isEmpty()) {
-            builder.classPaths.retainAll(classPathsFromCmdLine);
-          }
-        }
-
-        validateArgument(builder);
-      } catch (final CmdLineException | IllegalArgumentException | InvalidValueException
-          | NoSuchFileException e) {
+        builder.config = Configuration.Builder.buildFromCmdLineArgs(builder.kgpArgs);
+      } catch (final CmdLineException | IllegalArgumentException | InvalidValueException e) {
         // todo: make error message of InvalidValueException more user-friendly
         parser.printUsage(System.err);
         throw new IllegalArgumentException(e.getMessage());
@@ -69,14 +72,8 @@ public class ClientConfiguration extends Configuration {
 
       return builder.build();
     }
-    
+
     public ClientConfiguration build() {
-
-      if (targetProject == null) {
-        targetProject = TargetProjectFactory.create(rootDir, productPaths, testPaths, classPaths,
-            JUnitVersion.JUNIT4);
-      }
-
       return new ClientConfiguration(this);
     }
     
@@ -92,6 +89,13 @@ public class ClientConfiguration extends Configuration {
       this.port = port;
     }
     
+    @Option(name = "--kgp-args", metaVar = "<kGenProg's args...>",
+        usage = "kGenProg's arguments.")
+    private void setKgpArgsFromCmdLineParser(final String kgpArgs) {
+      this.kgpArgs = kgpArgs.split(" ");
+    }
+    
   }
-
+  
 }
+
