@@ -36,7 +36,6 @@ public class ClientLauncher {
 
   public void launch(final ClientConfiguration clientConfig) {
     Configuration config = clientConfig.getConfig();
-    System.out.println(clientConfig.getHost() + ":" + clientConfig.getPort());
     setLogLevel(config.getLogLevel());
 
     final FaultLocalization faultLocalization = new Ochiai();

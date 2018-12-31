@@ -10,7 +10,7 @@ import jp.kusumotolab.kgenprog.Configuration;
  * kGenProg のオプションに {@code --host <host>} と {@code --port <port>} を追加したもの．
  * 従来の kGenProg のオプションは {@code --kgp-args <args...>} として記述する．
  * <br>
- * Note: 現状 kGenProg オプションにスペースが入っているとバグる．
+ * FIXME: 現状 kGenProg オプションにスペースが入っているとバグる．
  * <pre>
  * --kgp-args '--config "/path/containing/space/kGenProg settings.toml"'
  *                                                      ^ Cannot use spaces!
