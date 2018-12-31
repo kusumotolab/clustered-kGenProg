@@ -26,7 +26,7 @@ public class ClientLauncher {
 
   public static void main(final String[] args) {
     try {
-      final Configuration config = Configuration.Builder.buildFromCmdLineArgs(args);
+      final Configuration config = ClientConfiguration.Builder.buildFromCmdLineArgs(args);
       final ClientLauncher launcher = new ClientLauncher();
       launcher.launch(config);
     } catch (final IllegalArgumentException e) {
