@@ -131,9 +131,9 @@ public class ClusterConfiguration {
       this.workingDir = workingDir;
     }
 
-    @Option(name = "--port", metaVar = "<num>",
+    @Option(name = "--port", metaVar = "<port>",
         usage = "Port number waiting for connection from clients.")
-    private void setRequiredSolutionsCountFromCmdLineParser(final int port) {
+    private void setPortNumberFromCmdLineParser(final int port) {
       this.port = port;
     }
   }
