@@ -12,6 +12,7 @@ import io.grpc.ManagedChannelBuilder;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.grpc.Coordinator;
+import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
@@ -22,6 +23,7 @@ import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterBlockingStub;
 import jp.kusumotolab.kgenprog.grpc.ProjectZipper;
 import jp.kusumotolab.kgenprog.grpc.Serializer;
+import jp.kusumotolab.kgenprog.project.factory.TargetProject;
 import jp.kusumotolab.kgenprog.project.test.EmptyTestResults;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
@@ -76,15 +78,22 @@ public class RemoteTestExecutor implements TestExecutor {
   @Override
   public void initialize() {
     final ByteArrayOutputStream stream = new ByteArrayOutputStream();
+    final TargetProject targetProject;
     try {
-      ProjectZipper.zipProject(config.getTargetProject(), () -> stream);
+      targetProject = ProjectZipper.zipProject(config.getTargetProject(), () -> stream);
     } catch (final IOException e) {
       log.error("failed to zip project", e);
       throw new RuntimeException("failed to zip project");
     }
+
+    final GrpcConfiguration configuration = Serializer
+        .updateConfiguration(Serializer.serialize(config)
+            .toBuilder(), targetProject)
+        .build();
+
     final ByteString zip = ByteString.copyFrom(stream.toByteArray());
     final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-        .setConfiguration(Serializer.serialize(config))
+        .setConfiguration(configuration)
         .setProject(zip)
         .build();
     log.debug("registerProject request");
