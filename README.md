@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master.svg?style=svg)](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master)
+[![CircleCI](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master.svg?style=svg&circle-token=7de79fe88bdd8eff9a276a35b460d988cc7a6100)](https://circleci.com/gh/kusumotolab/clustered-kGenProg/tree/master)
 
 # clustered kGenProg
 
