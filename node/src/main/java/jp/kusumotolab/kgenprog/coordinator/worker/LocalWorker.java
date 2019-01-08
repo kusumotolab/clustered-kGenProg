@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.worker;
+package jp.kusumotolab.kgenprog.coordinator.worker;
 
 import java.io.IOException;
 import java.nio.file.Path;

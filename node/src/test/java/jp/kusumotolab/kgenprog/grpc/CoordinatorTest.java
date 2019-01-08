@@ -14,10 +14,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import io.grpc.ManagedChannel;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.testing.GrpcCleanupRule;
 import io.reactivex.Single;
+import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterBlockingStub;
 
 
@@ -43,8 +45,12 @@ public class CoordinatorTest {
 
     worker = mock(Worker.class);
     coordinator = new Coordinator(config, worker);
-    grpcCleanup.register(serverBuilder.addService(coordinator)
-        .build()
+
+    for (final ServerServiceDefinition service : coordinator.getServices()) {
+      serverBuilder.addService(service);
+    }
+
+    grpcCleanup.register(serverBuilder.build()
         .start());
     final ManagedChannel channel = grpcCleanup.register(channelBuilder.build());
     stub = KGenProgClusterGrpc.newBlockingStub(channel);
@@ -72,30 +78,6 @@ public class CoordinatorTest {
 
     // もう一度呼び出し
     stub.registerProject(request);
-
-    // LocalWorkerへの引数の確認
-    final ArgumentCaptor<Integer> captor = ArgumentCaptor.forClass(Integer.class);
-    verify(worker, times(2)).registerProject(any(), captor.capture());
-
-    // projectIdは異なるはず
-    final List<Integer> values = captor.getAllValues();
-    assertThat(values).hasSize(2);
-    assertThat(values.get(0)).isNotEqualTo(values.get(1));
-  }
-
-  @Test
-  public void testRegisterProjectError() {
-    // Errorを起こしたSingleを生成
-    final Single<GrpcRegisterProjectResponse> responseSingle = Single.error(new Exception());
-    when(worker.registerProject(any(), anyInt())).thenReturn(responseSingle);
-
-    // registerProject実行
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-        .build();
-    final GrpcRegisterProjectResponse response = stub.registerProject(request);
-
-    // requestが失敗するはず
-    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
   }
 
   @Test
@@ -163,22 +145,5 @@ public class CoordinatorTest {
         ArgumentCaptor.forClass(GrpcUnregisterProjectRequest.class);
     verify(worker, times(1)).unregisterProject(captor.capture());
     assertThat(captor.getValue()).isEqualTo(unregisterProjectRequest);
-  }
-
-  @Test
-  public void testUnregisterProjectError() {
-    // Errorを起こしたSingleを生成
-    final Single<GrpcUnregisterProjectResponse> responseSingle = Single.error(new Exception());
-    when(worker.unregisterProject(any())).thenReturn(responseSingle);
-
-    // unregisterProject実行
-    final GrpcUnregisterProjectRequest unregisterProjectRequest =
-        GrpcUnregisterProjectRequest.newBuilder()
-            .build();
-    final GrpcUnregisterProjectResponse unregisterProjectResponse =
-        stub.unregisterProject(unregisterProjectRequest);
-
-    // レスポンス確認
-    assertThat(unregisterProjectResponse.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
   }
 }

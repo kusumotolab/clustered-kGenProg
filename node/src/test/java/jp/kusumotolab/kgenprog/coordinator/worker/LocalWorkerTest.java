@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.worker;
+package jp.kusumotolab.kgenprog.coordinator.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

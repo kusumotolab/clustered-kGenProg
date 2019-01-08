@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.worker;
+package jp.kusumotolab.kgenprog.coordinator.worker;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -17,7 +17,7 @@ public class RemoteWorker implements Worker {
 
   final KGenProgClusterBlockingStub blockingStub;
 
-  private RemoteWorker(final String name, final int port) {
+  public RemoteWorker(final String name, final int port) {
     final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
         .build();
