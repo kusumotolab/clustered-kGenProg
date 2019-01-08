@@ -22,6 +22,30 @@ service KGenProgCluster {
   rpc unregisterProject (GrpcUnregisterProjectRequest) returns (GrpcUnregisterProjectResponse) {}
 }
 
+service CoordinatorService {
+  /*
+   * コーディネータにワーカーを登録する
+   */
+  rpc registerWorker (GrpcRegisterWorkerRequest) returns (GrpcRegisterWorkerResponse) {}
+
+  /*
+   * コーディネータから修正対象プロジェクトを取得する
+   */
+  rpc getProject (GrpcGetProjectRequest) returns (GrpcGetProjectResponse) {}
+}
+
+service WorkerService {
+  /*
+   * テストを実行する
+   */
+  rpc executeTest (GrpcExecuteTestRequest) returns (GrpcExecuteTestResponse) {}
+
+  /*
+   * ワーカーからプロジェクトを登録解除する
+   */
+  rpc unregisterProject (GrpcUnregisterProjectRequest) returns (GrpcUnregisterProjectResponse) {}
+}
+
 message GrpcRegisterProjectRequest {
   /*
    * プロジェクトやKGenProgに関する設定
@@ -243,4 +267,47 @@ message GrpcUnregisterProjectResponse {
    * 通信ステータス
    */
   int32 status = 1;
+}
+
+message GrpcRegisterWorkerRequest {
+  /*
+   * 登録するワーカーのホスト名
+   */
+  string host = 1;
+
+  /*
+   * 登録するワーカーのポート番号
+   */
+  int32 port = 2;
+}
+
+message GrpcRegisterWorkerResponse {
+  /*
+   * 通信ステータス
+   */
+  int32 status = 1;
+}
+
+message GrpcGetProjectRequest {
+  /*
+   * 取得したいプロジェクトのID
+   */
+  int32 projectId = 1;
+}
+
+message GrpcGetProjectResponse {
+  /*
+   * 通信ステータス
+   */
+  int32 status = 1;
+
+  /*
+   * プロジェクトやKGenProgに関する設定
+   */
+  GrpcConfiguration configuration = 2;
+
+  /*
+   * プロジェクトをzip圧縮したbyte列
+   */
+  bytes project = 3;
 }
