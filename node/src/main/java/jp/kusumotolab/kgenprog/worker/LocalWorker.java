@@ -1,11 +1,21 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.worker;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import io.reactivex.Single;
+import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.Project;
+import jp.kusumotolab.kgenprog.grpc.Serializer;
+import jp.kusumotolab.kgenprog.grpc.Worker;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 /**

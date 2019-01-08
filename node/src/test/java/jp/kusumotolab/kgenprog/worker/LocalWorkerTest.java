@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -17,6 +17,15 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import jp.kusumotolab.kgenprog.Configuration;
+import jp.kusumotolab.kgenprog.coordinator.Coordinator;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.Project;
+import jp.kusumotolab.kgenprog.grpc.Serializer;
 import jp.kusumotolab.kgenprog.project.TargetFullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.build.EmptyBuildResults;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
