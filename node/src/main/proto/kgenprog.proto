@@ -39,6 +39,11 @@ service WorkerService {
    * テストを実行する
    */
   rpc executeTest (GrpcExecuteTestRequest) returns (GrpcExecuteTestResponse) {}
+
+  /*
+   * ワーカーからプロジェクトを登録解除する
+   */
+  rpc unregisterProject (GrpcUnregisterProjectRequest) returns (GrpcUnregisterProjectResponse) {}
 }
 
 message GrpcRegisterProjectRequest {
