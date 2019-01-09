@@ -3,9 +3,7 @@ package jp.kusumotolab.kgenprog.coordinator;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import jp.kusumotolab.kgenprog.coordinator.worker.LocalWorker;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
-import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class CoordinatorLauncher {
 

@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.coordinator.worker;
+package jp.kusumotolab.kgenprog.worker;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -72,18 +72,15 @@ public class LocalWorkerTest {
     when(project.executeTest(any())).thenReturn(testResults);
     when(project.getConfiguration()).thenReturn(config);
 
-    // Coordinator のモックの作成
-    final CoordinatorServiceBlockingStub mockCoordinatorService = CoordinatorServiceGrpc.newBlockingStub(
-        managedChannel);
-
     // LocalWorkerの作成
-    final LocalWorker worker = spy(new LocalWorker(path, mockCoordinatorService));
+    final CoordinatorClient coordinatorClient = spy(new CoordinatorClient(managedChannel));
+    final LocalWorker worker = spy(new LocalWorker(path, coordinatorClient));
     doReturn(project).when(worker)
         .createProject(any(), anyInt());
     final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
         .build();
-    doReturn(response).when(worker)
-        .getProject(any());
+    doReturn(response).when(coordinatorClient)
+        .getProject(anyInt());
 
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
         .setProjectId(0)
@@ -104,12 +101,14 @@ public class LocalWorkerTest {
 
     // Workerの作成
     final Project project = mock(Project.class);
-    final LocalWorker worker = spy(new LocalWorker(path, mockCoordinatorService));
+    final CoordinatorClient coordinatorClient = spy(new CoordinatorClient(managedChannel));
+    final LocalWorker worker = spy(new LocalWorker(path, coordinatorClient));
     final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
         .build();
-    doReturn(project).when(worker).createProject(any(), anyInt());
-    doReturn(response).when(worker).getProject(any());
-
+    doReturn(project).when(worker)
+        .createProject(any(), anyInt());
+    doReturn(response).when(coordinatorClient)
+        .getProject(anyInt());
 
     // プロジェクトを登録する
     final int projectId = 1;

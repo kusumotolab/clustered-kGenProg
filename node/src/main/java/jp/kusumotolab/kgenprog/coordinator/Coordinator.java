@@ -27,7 +27,6 @@ import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Worker;
-import jp.kusumotolab.kgenprog.coordinator.worker.RemoteWorker;
 
 public class Coordinator {
 

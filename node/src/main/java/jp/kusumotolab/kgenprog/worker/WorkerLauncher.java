@@ -4,15 +4,17 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
+import jp.kusumotolab.kgenprog.grpc.Worker;
 import jp.kusumotolab.kgenprog.worker.WorkerConfiguration.Builder;
 
 public class WorkerLauncher {
-
-  private static final Logger log = LoggerFactory.getLogger(WorkerLauncher.class);
 
   public static void main(final String[] args) {
     final WorkerLauncher workerLauncher = new WorkerLauncher();
@@ -26,10 +28,30 @@ public class WorkerLauncher {
         .usePlaintext()
         .build();
 
+    final CoordinatorClient coordinatorClient = new CoordinatorClient(managedChannel);
+
     final int freePort = getFreePort();
     final String name = getHostAddress();
-    new CoordinatorClient(managedChannel).registerWorker(name, freePort);
+    coordinatorClient.registerWorker(name, freePort);
 
+    final Path path = Paths.get("worker-" + freePort);
+    try {
+      Files.createDirectory(path);
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+    final Worker worker = new LocalWorker(path, coordinatorClient);
+    final WorkerService workerService = new WorkerService(worker);
+
+    final Server server = ServerBuilder.forPort(freePort)
+        .addService(workerService)
+        .build();
+    try {
+      server.start();
+      server.awaitTermination();
+    } catch (final IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private int getFreePort() {

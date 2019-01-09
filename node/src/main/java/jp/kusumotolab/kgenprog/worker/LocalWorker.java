@@ -1,18 +1,14 @@
-package jp.kusumotolab.kgenprog.coordinator.worker;
+package jp.kusumotolab.kgenprog.worker;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import io.grpc.ManagedChannel;
 import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc.CoordinatorServiceBlockingStub;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
@@ -30,12 +26,12 @@ public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
   private final Path workdir;
-  private final CoordinatorServiceBlockingStub blockingStub;
+  private CoordinatorClient coordinatorClient;
 
-  public LocalWorker(final Path workdir, final CoordinatorServiceBlockingStub blockingStub) {
+  public LocalWorker(final Path workdir, final CoordinatorClient coordinatorClient) {
     this.workdir = workdir;
+    this.coordinatorClient = coordinatorClient;
     projectMap = new ConcurrentHashMap<>();
-    this.blockingStub = blockingStub;
   }
 
   @Override
@@ -44,11 +40,7 @@ public class LocalWorker implements Worker {
     Project project = projectMap.get(request.getProjectId());
     if (project == null) {
       // プロジェクトが見つからなかった場合、プロジェクトをCoordinatorに問い合わせる
-      final GrpcGetProjectRequest projectRequest = GrpcGetProjectRequest.newBuilder()
-          .setProjectId(request.getProjectId())
-          .build();
-      final GrpcGetProjectResponse response = getProject(projectRequest);
-      project = registerProject(response, request.getProjectId());
+      project = getProject(request.getProjectId());
     }
     final Path rootPath = project.getConfiguration()
         .getTargetProject().rootPath;
@@ -61,6 +53,16 @@ public class LocalWorker implements Worker {
         .build());
 
     return responseSingle;
+  }
+
+  private synchronized Project getProject(final int id) {
+    final Project project1 = projectMap.get(id);
+    if (project1 != null) {
+      return project1;
+    }
+    final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
+    final Project project = registerProject(response, id);
+    return project;
   }
 
   Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
@@ -111,9 +113,5 @@ public class LocalWorker implements Worker {
   protected Project createProject(final GrpcGetProjectResponse response, final int projectId)
       throws IOException {
     return new Project(workdir, response, projectId);
-  }
-
-  protected GrpcGetProjectResponse getProject(final GrpcGetProjectRequest request) {
-    return blockingStub.getProject(request);
   }
 }

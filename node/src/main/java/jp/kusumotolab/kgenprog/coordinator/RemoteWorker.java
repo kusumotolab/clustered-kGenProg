@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.coordinator.worker;
+package jp.kusumotolab.kgenprog.coordinator;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;

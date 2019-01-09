@@ -80,7 +80,7 @@ sourceSets {
 startScripts.enabled = false
 
 task kGenProgCoordinator(type: CreateStartScripts) {
-    mainClassName = 'jp.kusumotolab.kgenprog.grpc.CoordinatorLauncher'
+    mainClassName = 'jp.kusumotolab.kgenprog.coordinator.CoordinatorLauncher'
     applicationName = 'kGenProg-coordinator'
     outputDir = new File(project.buildDir, 'tmp')
     classpath = jar.outputs.files + project.configurations.runtime
@@ -93,9 +93,17 @@ task kGenProgClient(type: CreateStartScripts) {
     classpath = jar.outputs.files + project.configurations.runtime
 }
 
+task kGenProgWorker(type: CreateStartScripts) {
+    mainClassName = 'jp.kusumotolab.kgenprog.worker.WorkerLauncher'
+    applicationName = 'kGenProg-worker'
+    outputDir = new File(project.buildDir, 'tmp')
+    classpath = jar.outputs.files + project.configurations.runtime
+}
+
 applicationDistribution.into('bin') {
     from(kGenProgCoordinator)
     from(kGenProgClient)
+    from(kGenProgWorker)
     fileMode = 0755
 }
 

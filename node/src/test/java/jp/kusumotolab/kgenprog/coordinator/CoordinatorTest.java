@@ -68,12 +68,6 @@ public class CoordinatorTest {
         .setStatus(Coordinator.STATUS_SUCCESS)
         .build();
 
-//    final Single<GrpcRegisterProjectResponse> responseSingle = Single.just(response);
-//
-//    final Worker mockWorker = mock(Worker.class);
-//    when(coordinator.createWorker(any(), any())).thenReturn(mockWorker);
-//    when(mockWorker.registerProject(any(), anyInt())).thenReturn(responseSingle);
-
     // registerProject実行
     final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
         .build();

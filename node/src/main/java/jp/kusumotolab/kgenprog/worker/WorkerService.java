@@ -11,21 +11,28 @@ import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterImplBase;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
-public class WorkerServer extends KGenProgClusterImplBase {
+public class WorkerService extends KGenProgClusterImplBase {
 
-  private static final Logger log = LoggerFactory.getLogger(WorkerServer.class);
+  private static final Logger log = LoggerFactory.getLogger(WorkerService.class);
 
   private final Worker worker;
 
-  public WorkerServer(final Worker worker) {
+  public WorkerService(final Worker worker) {
     this.worker = worker;
   }
 
   @Override
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
+    log.info("executeTest request");
+    log.debug(request.toString());
+
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     final GrpcExecuteTestResponse response = responseSingle.blockingGet();
+
+    log.info("executeTest response");
+    log.debug(response.toString());
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
   }
@@ -33,8 +40,15 @@ public class WorkerServer extends KGenProgClusterImplBase {
   @Override
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
       final StreamObserver<GrpcUnregisterProjectResponse> responseObserver) {
+    log.info("unregisterProject request");
+    log.debug(request.toString());
+
     final Single<GrpcUnregisterProjectResponse> responseSingle = worker.unregisterProject(request);
     final GrpcUnregisterProjectResponse response = responseSingle.blockingGet();
+
+    log.info("unregisterProject response");
+    log.debug(response.toString());
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
   }
