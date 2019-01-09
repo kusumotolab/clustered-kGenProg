@@ -4,13 +4,19 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import io.grpc.ManagedChannel;
 import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc;
+import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc.CoordinatorServiceBlockingStub;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
@@ -20,63 +26,54 @@ import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 /**
  * ローカルでテストを実行するワーカー
- * 
- * @author Ryo Arima
  *
+ * @author Ryo Arima
  */
 public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
   private final Path workdir;
+  private final CoordinatorServiceBlockingStub blockingStub;
 
-  public LocalWorker(final Path workdir) {
+  public LocalWorker(final Path workdir, final ManagedChannel managedChannel) {
     this.workdir = workdir;
     projectMap = new ConcurrentHashMap<>();
-  }
-
-  @Override
-  public Single<GrpcRegisterProjectResponse> registerProject(
-      final GrpcRegisterProjectRequest request, final int projectId) {
-    try {
-      final Project project = createProject(request, projectId);
-      projectMap.put(projectId, project);
-
-      final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-          .setProjectId(projectId)
-          .setStatus(Coordinator.STATUS_SUCCESS)
-          .build();
-
-      return Single.just(response);
-
-    } catch (final Exception e) {
-      return Single.error(e);
-    }
+    blockingStub = CoordinatorServiceGrpc.newBlockingStub(managedChannel);
   }
 
   @Override
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     final Single<GrpcExecuteTestResponse> responseSingle;
-    final Project project = projectMap.get(request.getProjectId());
+    Project project = projectMap.get(request.getProjectId());
     if (project == null) {
-      // プロジェクトが見つからなかった場合、実行失敗メッセージを返す
-      final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_FAILED)
+      // プロジェクトが見つからなかった場合、プロジェクトをCoordinatorに問い合わせる
+      final GrpcGetProjectRequest projectRequest = GrpcGetProjectRequest.newBuilder()
+          .setProjectId(request.getProjectId())
           .build();
-      responseSingle = Single.just(response);
-
-    } else {
-      final Path rootPath = project.getConfiguration()
-          .getTargetProject().rootPath;
-      final Gene gene = Serializer.deserialize(rootPath, request.getGene());
-      final Single<Gene> geneSingle = Single.just(gene);
-      final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
-      responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
-          .setTestResults(Serializer.serialize(results))
-          .build());
+      final GrpcGetProjectResponse response = blockingStub.getProject(projectRequest);
+      project = registerProject(response, request.getProjectId());
     }
+    final Path rootPath = project.getConfiguration()
+        .getTargetProject().rootPath;
+    final Gene gene = Serializer.deserialize(rootPath, request.getGene());
+    final Single<Gene> geneSingle = Single.just(gene);
+    final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
+    responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
+        .setStatus(Coordinator.STATUS_SUCCESS)
+        .setTestResults(Serializer.serialize(results))
+        .build());
 
     return responseSingle;
+  }
+
+  private Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
+    try {
+      final Project project = createProject(request, projectId);
+      projectMap.put(projectId, project);
+      return project;
+    } catch (final Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override
@@ -106,18 +103,16 @@ public class LocalWorker implements Worker {
 
   /**
    * 新たなプロジェクトを生成する
-   * 
+   *
    * テストの際にモックとして差し替えることを想定している
-   * 
+   *
    * @param request プロジェクトID
    * @param projectId プロジェクトのConfiguration
    * @return 生成されたプロジェクト
    * @throws IOException
    */
-  protected Project createProject(final GrpcRegisterProjectRequest request, final int projectId)
+  protected Project createProject(final GrpcGetProjectResponse request, final int projectId)
       throws IOException {
     return new Project(workdir, request, projectId);
   }
-
-
 }

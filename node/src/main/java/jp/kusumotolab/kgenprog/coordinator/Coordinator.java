@@ -42,9 +42,7 @@ public class Coordinator {
   private final Map<Integer, ByteString> binaryMap = new HashMap<>();
   private final Map<Integer, GrpcConfiguration> configurationMap = new HashMap<>();
 
-  public Coordinator(final ClusterConfiguration config, final Worker worker) {
-    loadBalancer.addWorker(worker);
-
+  public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
         .addService(new ClientServer(this))
         .addService(new WorkerServer(this))

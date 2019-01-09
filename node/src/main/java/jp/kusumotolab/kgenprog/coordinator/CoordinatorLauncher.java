@@ -1,10 +1,11 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.coordinator;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.coordinator.worker.LocalWorker;
+import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
+import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class CoordinatorLauncher {
 
@@ -25,8 +26,7 @@ public class CoordinatorLauncher {
     final Path workerDir = config.getWorkingDir()
         .resolve("worker1");
     Files.createDirectories(workerDir);
-    final Worker worker = new LocalWorker(config.getWorkingDir());
-    final Coordinator coordinator = new Coordinator(config, worker);
+    final Coordinator coordinator = new Coordinator(config);
     coordinator.start();
   }
 

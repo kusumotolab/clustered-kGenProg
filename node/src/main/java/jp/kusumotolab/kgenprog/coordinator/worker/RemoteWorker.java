@@ -25,12 +25,6 @@ public class RemoteWorker implements Worker {
   }
 
   @Override
-  public Single<GrpcRegisterProjectResponse> registerProject(
-      final GrpcRegisterProjectRequest request, final int projectId) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     return Single.create(emitter -> {
       final GrpcExecuteTestResponse response = blockingStub.executeTest(request);

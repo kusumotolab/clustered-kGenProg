@@ -56,7 +56,7 @@ public class Project {
    * @param projectId プロジェクトID
    * @throws IOException
    */
-  public Project(final Path workdir, final GrpcRegisterProjectRequest request, final int projectId)
+  public Project(final Path workdir, final GrpcGetProjectResponse request, final int projectId)
       throws IOException {
 
     this.projectId = projectId;
@@ -104,7 +104,7 @@ public class Project {
   }
 
   private Configuration unzipProject(final Path projectDir,
-      final GrpcRegisterProjectRequest request) throws IOException {
+      final GrpcGetProjectResponse request) throws IOException {
 
     final Configuration config = Serializer.deserialize(request.getConfiguration());
     Files.createDirectory(projectDir);

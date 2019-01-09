@@ -11,16 +11,6 @@ import io.reactivex.Single;
 public interface Worker {
 
   /**
-   * ワーカーにプロジェクトを登録する
-   * 
-   * @param request リクエスト
-   * @param projectId コーディネータによって割り当てられたプロジェクトID
-   * @return レスポンス
-   */
-  Single<GrpcRegisterProjectResponse> registerProject(GrpcRegisterProjectRequest request,
-      int projectId);
-
-  /**
    * テストを実行しその結果を返す
    * 
    * @param request リクエスト
