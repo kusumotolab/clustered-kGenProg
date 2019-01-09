@@ -44,8 +44,8 @@ public class Coordinator {
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
-        .addService(new ClientServer(this))
-        .addService(new WorkerServer(this))
+        .addService(new KGenProgCluster(this))
+        .addService(new CoordinatorService(this))
         .build();
 
     services.addAll(server.getServices());
@@ -136,8 +136,8 @@ public class Coordinator {
     log.info("registerWorker request");
     log.debug(request.toString());
 
-    final RemoteWorker remoteWorker = new RemoteWorker(request.getHost(), request.getPort());
-    loadBalancer.addWorker(remoteWorker);
+    final Worker remoteWorker = createWorker(request.getHost(), request.getPort());
+    addWorkerToLoadBalancer(remoteWorker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
         .setStatus(STATUS_SUCCESS)
@@ -172,8 +172,15 @@ public class Coordinator {
     log.debug(response.toString());
   }
 
-  // テスト用
   public List<ServerServiceDefinition> getServices() {
     return services;
+  }
+
+  protected Worker createWorker(final String name, final int port) {
+    return new RemoteWorker(name, port);
+  }
+
+  protected void addWorkerToLoadBalancer(final Worker worker) {
+    loadBalancer.addWorker(worker);
   }
 }

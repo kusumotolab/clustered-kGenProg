@@ -7,11 +7,11 @@ import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
 
-public class WorkerServer extends CoordinatorServiceImplBase {
+public class CoordinatorService extends CoordinatorServiceImplBase {
 
   private final Coordinator coordinator;
 
-  public WorkerServer(final Coordinator coordinator) {
+  public CoordinatorService(final Coordinator coordinator) {
     this.coordinator = coordinator;
   }
 

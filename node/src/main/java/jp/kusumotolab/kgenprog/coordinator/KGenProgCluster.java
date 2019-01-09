@@ -10,11 +10,11 @@ import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterImplBase;
 
-public class ClientServer extends KGenProgClusterImplBase {
+public class KGenProgCluster extends KGenProgClusterImplBase {
 
   private final Coordinator coordinator;
 
-  public ClientServer(final Coordinator coordinator) {
+  public KGenProgCluster(final Coordinator coordinator) {
     this.coordinator = coordinator;
   }
 

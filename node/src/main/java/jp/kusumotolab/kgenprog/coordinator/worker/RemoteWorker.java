@@ -5,8 +5,6 @@ import io.grpc.ManagedChannelBuilder;
 import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;

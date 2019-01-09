@@ -8,11 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc.CoordinatorServiceBlockingStub;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerRequest;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
 import jp.kusumotolab.kgenprog.worker.WorkerConfiguration.Builder;
 
 public class WorkerLauncher {

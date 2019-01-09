@@ -11,13 +11,13 @@ import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterImplBase;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
-public class CoordinatorServer extends KGenProgClusterImplBase {
+public class WorkerServer extends KGenProgClusterImplBase {
 
-  private static final Logger log = LoggerFactory.getLogger(CoordinatorServer.class);
+  private static final Logger log = LoggerFactory.getLogger(WorkerServer.class);
 
   private final Worker worker;
 
-  public CoordinatorServer(final Worker worker) {
+  public WorkerServer(final Worker worker) {
     this.worker = worker;
   }
 

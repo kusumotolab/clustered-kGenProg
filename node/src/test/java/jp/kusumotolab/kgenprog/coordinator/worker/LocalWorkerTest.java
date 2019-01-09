@@ -14,147 +14,106 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
+import io.grpc.ManagedChannel;
+import io.grpc.inprocess.InProcessChannelBuilder;
+import io.grpc.inprocess.InProcessServerBuilder;
+import io.grpc.testing.GrpcCleanupRule;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
+import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc;
+import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc.CoordinatorServiceBlockingStub;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
-import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
-import jp.kusumotolab.kgenprog.grpc.Serializer;
 import jp.kusumotolab.kgenprog.project.TargetFullyQualifiedName;
 import jp.kusumotolab.kgenprog.project.build.EmptyBuildResults;
-import jp.kusumotolab.kgenprog.project.factory.TargetProject;
-import jp.kusumotolab.kgenprog.project.factory.TargetProjectFactory;
 import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 public class LocalWorkerTest {
 
-  private LocalWorker worker;
+  @Rule
+  public final GrpcCleanupRule grpcCleanupRule = new GrpcCleanupRule();
+
+  private ManagedChannel managedChannel;
+  private Path path = Paths.get("work-test-dir");
 
   @Before
   public void setup() {
-    worker = spy(new LocalWorker(null, null));
-  }
+    final String name = InProcessServerBuilder.generateName();
 
-//  @Test
-//  public void testRegisterProject() throws IOException {
-//    final Project project = mock(Project.class);
-//    doReturn(project).when(worker)
-//        .createProject(any(), anyInt());
-//
-//    final Path rootPath = Paths.get("../main/example/BuildSuccess01");
-//    final TargetProject targetProject = TargetProjectFactory.create(rootPath);
-//    final Configuration config = new Configuration.Builder(targetProject).build();
-//    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-//        .setConfiguration(Serializer.serialize(config))
-//        .build();
-//
-//    final GrpcRegisterProjectResponse response = worker.registerProject(request, 1)
-//        .blockingGet();
-//
-//    // requestは成功するはず
-//    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-//
-//    // IDの確認
-//    assertThat(response.getProjectId()).isEqualTo(1);
-//
-//    // Projectコンストラクタの引数の確認
-//    final ArgumentCaptor<GrpcRegisterProjectRequest> captor =
-//        ArgumentCaptor.forClass(GrpcRegisterProjectRequest.class);
-//    verify(worker, times(1)).createProject(captor.capture(), anyInt());
-//
-//    final Configuration capturedConfig = Serializer.deserialize(captor.getValue()
-//        .getConfiguration());
-//    final TargetProject targetProject1 = capturedConfig.getTargetProject();
-//    assertThat(targetProject1.rootPath).isEqualTo(targetProject.rootPath);
-//    assertThat(targetProject1.getClassPaths()).containsAll(targetProject.getClassPaths());
-//    assertThat(targetProject1.getProductSourcePaths())
-//        .containsExactlyElementsOf(targetProject.getProductSourcePaths());
-//    assertThat(targetProject1.getTestSourcePaths())
-//        .containsExactlyElementsOf(targetProject.getTestSourcePaths());
-//  }
+    managedChannel = grpcCleanupRule.register(InProcessChannelBuilder.forName(name)
+        .directExecutor()
+        .build());
+    path = Paths.get("work-test-dir");
+  }
 
   @Test
   public void testExecuteTest() throws IOException {
-    // モックの作成
-    final TestResult testResult1 =
+
+    // TestResults のの作成
+    final TestResult testResult =
         new TestResult(new TargetFullyQualifiedName("A"), false, Collections.emptyMap());
-    final TestResults testResults1 = new TestResults();
-    testResults1.add(testResult1);
-    testResults1.setBuildResults(EmptyBuildResults.instance);
+    final TestResults testResults = new TestResults();
+    testResults.add(testResult);
+    testResults.setBuildResults(EmptyBuildResults.instance);
 
-    final TestResult testResult2 =
-        new TestResult(new TargetFullyQualifiedName("B"), false, Collections.emptyMap());
-    final TestResults testResults2 = new TestResults();
-    testResults2.add(testResult2);
-    testResults2.setBuildResults(EmptyBuildResults.instance);
+    // ダミーの Config
+    final Configuration config = new Configuration.Builder(Paths.get(""), Collections.emptyList(),
+        Collections.emptyList()).build();
 
-    final Configuration config =
-        new Configuration.Builder(Paths.get(""), Collections.emptyList(), Collections.emptyList())
-            .build();
+    // ダミーの Project
+    final Project project = mock(Project.class);
+    when(project.executeTest(any())).thenReturn(testResults);
+    when(project.getConfiguration()).thenReturn(config);
 
-    final Project project1 = mock(Project.class);
-    when(project1.executeTest(any())).thenReturn(testResults1);
-    when(project1.getConfiguration()).thenReturn(config);
+    // Coordinator のモックの作成
+    final CoordinatorServiceBlockingStub mockCoordinatorService = CoordinatorServiceGrpc.newBlockingStub(
+        managedChannel);
 
-    final Project project2 = mock(Project.class);
-    when(project2.executeTest(any())).thenReturn(testResults2);
-    when(project2.getConfiguration()).thenReturn(config);
-
-    // 1回目の呼び出しでproject1, 2回目の呼び出しでproject2を返す
-    doReturn(project1, project2).when(worker)
+    // LocalWorkerの作成
+    final LocalWorker worker = spy(new LocalWorker(path, mockCoordinatorService));
+    doReturn(project).when(worker)
         .createProject(any(), anyInt());
+    final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
+        .build();
+    doReturn(response).when(worker)
+        .getProject(any());
 
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
+    final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+        .setProjectId(0)
         .build();
 
-    final int projectId1 = 1;
-    final int projectId2 = 2;
-    worker.registerProject(request, projectId1);
-    worker.registerProject(request, projectId2);
+    // 二回テスト実行
+    worker.executeTest(request);
+    worker.executeTest(request);
 
-    // project1.executeTestが実行されることを確認する
-    final GrpcExecuteTestRequest executeTestRequest1 = GrpcExecuteTestRequest.newBuilder()
-        .setProjectId(projectId1)
-        .build();
-    final GrpcExecuteTestResponse executeTestResponse1 = worker.executeTest(executeTestRequest1)
-        .blockingGet();
-
-    assertThat(executeTestResponse1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(executeTestResponse1.getTestResults()
-        .getValueMap()).containsOnlyKeys("A");
-
-    // project2.executeTestが実行されることを確認する
-    final GrpcExecuteTestRequest executeTestRequest2 = GrpcExecuteTestRequest.newBuilder()
-        .setProjectId(projectId2)
-        .build();
-    final GrpcExecuteTestResponse executeTestResponse2 = worker.executeTest(executeTestRequest2)
-        .blockingGet();
-
-    assertThat(executeTestResponse2.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(executeTestResponse2.getTestResults()
-        .getValueMap()).containsOnlyKeys("B");
+    // 呼ばれているの1回のはず
+    verify(worker, times(1)).createProject(any(), anyInt());
   }
 
   @Test
   public void testUnregisterProject() throws IOException {
+    final CoordinatorServiceBlockingStub mockCoordinatorService = CoordinatorServiceGrpc.newBlockingStub(
+        managedChannel);
+
+    // Workerの作成
     final Project project = mock(Project.class);
-    doReturn(project).when(worker)
-        .createProject(any(), anyInt());
+    final LocalWorker worker = spy(new LocalWorker(path, mockCoordinatorService));
+    final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
+        .build();
+    doReturn(project).when(worker).createProject(any(), anyInt());
+    doReturn(response).when(worker).getProject(any());
+
 
     // プロジェクトを登録する
-    final GrpcRegisterProjectRequest registerRequest = GrpcRegisterProjectRequest.newBuilder()
-        .build();
-
     final int projectId = 1;
-    worker.registerProject(registerRequest, projectId);
+    worker.registerProject(response, projectId);
 
     final GrpcUnregisterProjectRequest request = GrpcUnregisterProjectRequest.newBuilder()
         .setProjectId(projectId)

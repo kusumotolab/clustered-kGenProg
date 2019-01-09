@@ -14,9 +14,6 @@ import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
@@ -35,10 +32,10 @@ public class LocalWorker implements Worker {
   private final Path workdir;
   private final CoordinatorServiceBlockingStub blockingStub;
 
-  public LocalWorker(final Path workdir, final ManagedChannel managedChannel) {
+  public LocalWorker(final Path workdir, final CoordinatorServiceBlockingStub blockingStub) {
     this.workdir = workdir;
     projectMap = new ConcurrentHashMap<>();
-    blockingStub = CoordinatorServiceGrpc.newBlockingStub(managedChannel);
+    this.blockingStub = blockingStub;
   }
 
   @Override
@@ -50,7 +47,7 @@ public class LocalWorker implements Worker {
       final GrpcGetProjectRequest projectRequest = GrpcGetProjectRequest.newBuilder()
           .setProjectId(request.getProjectId())
           .build();
-      final GrpcGetProjectResponse response = blockingStub.getProject(projectRequest);
+      final GrpcGetProjectResponse response = getProject(projectRequest);
       project = registerProject(response, request.getProjectId());
     }
     final Path rootPath = project.getConfiguration()
@@ -66,7 +63,7 @@ public class LocalWorker implements Worker {
     return responseSingle;
   }
 
-  private Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
+  Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
     try {
       final Project project = createProject(request, projectId);
       projectMap.put(projectId, project);
@@ -106,13 +103,17 @@ public class LocalWorker implements Worker {
    *
    * テストの際にモックとして差し替えることを想定している
    *
-   * @param request プロジェクトID
+   * @param response プロジェクトID
    * @param projectId プロジェクトのConfiguration
    * @return 生成されたプロジェクト
    * @throws IOException
    */
-  protected Project createProject(final GrpcGetProjectResponse request, final int projectId)
+  protected Project createProject(final GrpcGetProjectResponse response, final int projectId)
       throws IOException {
-    return new Project(workdir, request, projectId);
+    return new Project(workdir, response, projectId);
+  }
+
+  protected GrpcGetProjectResponse getProject(final GrpcGetProjectRequest request) {
+    return blockingStub.getProject(request);
   }
 }

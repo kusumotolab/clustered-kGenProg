@@ -52,16 +52,16 @@ public class Project {
    * プロジェクト本体がZIP圧縮されたプロジェクトに対するProjectを生成
    * 
    * @param workdir 作業ディレクトリ
-   * @param request gRPCリクエスト
+   * @param response gRPCリクエスト
    * @param projectId プロジェクトID
    * @throws IOException
    */
-  public Project(final Path workdir, final GrpcGetProjectResponse request, final int projectId)
+  public Project(final Path workdir, final GrpcGetProjectResponse response, final int projectId)
       throws IOException {
 
     this.projectId = projectId;
     this.projectDir = workdir.resolve(Integer.toString(projectId));
-    this.config = unzipProject(projectDir, request);
+    this.config = unzipProject(projectDir, response);
     this.strategies = createStrategies(this.config);
     this.variantStore = new VariantStore(this.config, strategies);
   }
@@ -104,13 +104,13 @@ public class Project {
   }
 
   private Configuration unzipProject(final Path projectDir,
-      final GrpcGetProjectResponse request) throws IOException {
+      final GrpcGetProjectResponse response) throws IOException {
 
-    final Configuration config = Serializer.deserialize(request.getConfiguration());
+    final Configuration config = Serializer.deserialize(response.getConfiguration());
     Files.createDirectory(projectDir);
     final TargetProject project = ProjectUnzipper.unzipProject(projectDir,
-        config.getTargetProject(), request.getProject()::newInput);
-    final GrpcConfiguration updateConfig = Serializer.updateConfiguration(request.getConfiguration()
+        config.getTargetProject(), response.getProject()::newInput);
+    final GrpcConfiguration updateConfig = Serializer.updateConfiguration(response.getConfiguration()
         .toBuilder(), project)
         .build();
 

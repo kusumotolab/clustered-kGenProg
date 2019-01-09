@@ -1,14 +1,13 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
-import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -19,8 +18,16 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.testing.GrpcCleanupRule;
 import io.reactivex.Single;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
+import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterBlockingStub;
+import jp.kusumotolab.kgenprog.grpc.Worker;
 
 
 public class CoordinatorTest {
@@ -35,7 +42,6 @@ public class CoordinatorTest {
       .directExecutor();
 
   private KGenProgClusterBlockingStub stub;
-  private Worker worker;
   private Coordinator coordinator;
 
 
@@ -43,8 +49,7 @@ public class CoordinatorTest {
   public void setup() throws IOException {
     final ClusterConfiguration config = new ClusterConfiguration.Builder().build();
 
-    worker = mock(Worker.class);
-    coordinator = new Coordinator(config, worker);
+    coordinator = spy(new Coordinator(config));
 
     for (final ServerServiceDefinition service : coordinator.getServices()) {
       serverBuilder.addService(service);
@@ -63,9 +68,11 @@ public class CoordinatorTest {
         .setStatus(Coordinator.STATUS_SUCCESS)
         .build();
 
-    final Single<GrpcRegisterProjectResponse> responseSingle = Single.just(response);
-
-    when(worker.registerProject(any(), anyInt())).thenReturn(responseSingle);
+//    final Single<GrpcRegisterProjectResponse> responseSingle = Single.just(response);
+//
+//    final Worker mockWorker = mock(Worker.class);
+//    when(coordinator.createWorker(any(), any())).thenReturn(mockWorker);
+//    when(mockWorker.registerProject(any(), anyInt())).thenReturn(responseSingle);
 
     // registerProject実行
     final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
@@ -75,9 +82,6 @@ public class CoordinatorTest {
     // requestは成功するはず
     assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
     assertThat(response1.getProjectId()).isEqualTo(response.getProjectId());
-
-    // もう一度呼び出し
-    stub.registerProject(request);
   }
 
   @Test
@@ -88,7 +92,9 @@ public class CoordinatorTest {
         .build();
     final Single<GrpcExecuteTestResponse> responseSingle = Single.just(response);
 
+    final Worker worker = mock(Worker.class);
     when(worker.executeTest(any())).thenReturn(responseSingle);
+    coordinator.addWorkerToLoadBalancer(worker);
 
     // executeTest実行
     final GrpcExecuteTestRequest executeTestRequest = GrpcExecuteTestRequest.newBuilder()
@@ -108,8 +114,10 @@ public class CoordinatorTest {
   @Test
   public void testExecuteTestError() {
     // Errorを起こしたSingleを生成
+    final Worker worker = mock(Worker.class);
     final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
     when(worker.executeTest(any())).thenReturn(responseSingle);
+    coordinator.addWorkerToLoadBalancer(worker);
 
     // executeTest実行
     final GrpcExecuteTestRequest executeTestRequest = GrpcExecuteTestRequest.newBuilder()
@@ -123,6 +131,7 @@ public class CoordinatorTest {
   @Test
   public void testUnregisterProject() {
     // レスポンスのモック作成
+    final Worker worker = mock(Worker.class);
     final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
         .setStatus(Coordinator.STATUS_SUCCESS)
         .build();
@@ -139,11 +148,5 @@ public class CoordinatorTest {
 
     // レスポンス確認
     assertThat(unregisterProjectResponse).isEqualTo(response);
-
-    // リクエスト確認
-    final ArgumentCaptor<GrpcUnregisterProjectRequest> captor =
-        ArgumentCaptor.forClass(GrpcUnregisterProjectRequest.class);
-    verify(worker, times(1)).unregisterProject(captor.capture());
-    assertThat(captor.getValue()).isEqualTo(unregisterProjectRequest);
   }
 }
