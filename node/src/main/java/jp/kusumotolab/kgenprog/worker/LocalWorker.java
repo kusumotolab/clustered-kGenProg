@@ -38,10 +38,11 @@ public class LocalWorker implements Worker {
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     final Single<GrpcExecuteTestResponse> responseSingle;
     Project project = projectMap.get(request.getProjectId());
-    if (project == null) {
-      // プロジェクトが見つからなかった場合、プロジェクトをCoordinatorに問い合わせる
-      project = getProject(request.getProjectId());
-    }
+    projectMap.computeIfAbsent(request.getProjectId(), id -> {
+      final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
+      return registerProject(response, id);
+    });
+
     final Path rootPath = project.getConfiguration()
         .getTargetProject().rootPath;
     final Gene gene = Serializer.deserialize(rootPath, request.getGene());
@@ -53,16 +54,6 @@ public class LocalWorker implements Worker {
         .build());
 
     return responseSingle;
-  }
-
-  private synchronized Project getProject(final int id) {
-    final Project project1 = projectMap.get(id);
-    if (project1 != null) {
-      return project1;
-    }
-    final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
-    final Project project = registerProject(response, id);
-    return project;
   }
 
   Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
