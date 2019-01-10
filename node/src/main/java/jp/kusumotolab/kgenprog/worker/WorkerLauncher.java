@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Level;
@@ -49,6 +50,7 @@ public class WorkerLauncher {
 
     final Server server = ServerBuilder.forPort(freePort)
         .addService(workerService)
+        .executor(Executors.newSingleThreadExecutor())
         .build();
     try {
       server.start();
