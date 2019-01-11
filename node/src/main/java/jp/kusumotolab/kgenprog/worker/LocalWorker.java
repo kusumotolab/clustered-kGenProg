@@ -37,11 +37,7 @@ public class LocalWorker implements Worker {
   @Override
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     final Single<GrpcExecuteTestResponse> responseSingle;
-    Project project = projectMap.get(request.getProjectId());
-    projectMap.computeIfAbsent(request.getProjectId(), id -> {
-      final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
-      return registerProject(response, id);
-    });
+    Project project = getProject(request.getProjectId());
 
     final Path rootPath = project.getConfiguration()
         .getTargetProject().rootPath;
@@ -56,14 +52,15 @@ public class LocalWorker implements Worker {
     return responseSingle;
   }
 
-  Project registerProject(final GrpcGetProjectResponse request, final int projectId) {
-    try {
-      final Project project = createProject(request, projectId);
-      projectMap.put(projectId, project);
-      return project;
-    } catch (final Exception e) {
-      throw new RuntimeException(e);
-    }
+  Project getProject(final int projectId) {
+    return projectMap.computeIfAbsent(projectId, id -> {
+      final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
+      try {
+        return createProject(response, id);
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   @Override

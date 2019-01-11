@@ -112,7 +112,7 @@ public class LocalWorkerTest {
 
     // プロジェクトを登録する
     final int projectId = 1;
-    worker.registerProject(response, projectId);
+    worker.getProject(projectId);
 
     final GrpcUnregisterProjectRequest request = GrpcUnregisterProjectRequest.newBuilder()
         .setProjectId(projectId)

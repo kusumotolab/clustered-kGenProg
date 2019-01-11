@@ -143,6 +143,10 @@ public class Coordinator {
         .build();
     responseObserver.onNext(response);
     responseObserver.onCompleted();
+
+    log.info("registerWorker response");
+    log.debug(response.toString());
+
   }
 
   public void getProject(final GrpcGetProjectRequest request,
