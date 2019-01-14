@@ -16,6 +16,7 @@ import java.util.Collections;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import io.grpc.ManagedChannel;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -40,8 +41,11 @@ public class LocalWorkerTest {
   @Rule
   public final GrpcCleanupRule grpcCleanupRule = new GrpcCleanupRule();
 
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private ManagedChannel managedChannel;
-  private Path path = Paths.get("work-test-dir");
+  private Path path;
 
   @Before
   public void setup() {
@@ -50,7 +54,8 @@ public class LocalWorkerTest {
     managedChannel = grpcCleanupRule.register(InProcessChannelBuilder.forName(name)
         .directExecutor()
         .build());
-    path = Paths.get("work-test-dir");
+    path = temporaryFolder.getRoot()
+        .toPath();
   }
 
   @Test
