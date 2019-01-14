@@ -142,20 +142,31 @@ public class CoordinatorTest {
 
   @Test
   public void testGetProject() {
-    final KGenProgClusterBlockingStub kGenProgClusterBlockingStub = KGenProgClusterGrpc.newBlockingStub(
-        channel);
-    final GrpcRegisterProjectRequest registerProjectRequest = GrpcRegisterProjectRequest.newBuilder()
-        .setProject(ByteString.copyFromUtf8("kGenProg"))
-        .build();
-    final GrpcRegisterProjectResponse registerProjectResponse = kGenProgClusterBlockingStub.registerProject(
-        registerProjectRequest);
-    final int projectId = registerProjectResponse.getProjectId();
+    final int projectId1 = registerBinary(ByteString.copyFromUtf8("kGenProg"));
+    final int projectId2 = registerBinary(ByteString.copyFromUtf8("kusumoto-lab"));
 
     final CoordinatorClient coordinatorClient = new CoordinatorClient(channel);
-    final GrpcGetProjectResponse response = coordinatorClient.getProject(projectId);
+    final GrpcGetProjectResponse response1 = coordinatorClient.getProject(projectId1);
+    final GrpcGetProjectResponse response2 = coordinatorClient.getProject(projectId2);
 
-    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(response.getProject()
+    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+    assertThat(response2.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+
+    assertThat(response1.getProject()
         .toStringUtf8()).isEqualTo("kGenProg");
+    assertThat(response2.getProject()
+        .toStringUtf8()).isEqualTo("kusumoto-lab");
+
+  }
+
+  private int registerBinary(final ByteString byteString) {
+    final KGenProgClusterBlockingStub kGenProgClusterBlockingStub = KGenProgClusterGrpc.newBlockingStub(
+        channel);
+    final GrpcRegisterProjectRequest registerProjectRequest1 = GrpcRegisterProjectRequest.newBuilder()
+        .setProject(byteString)
+        .build();
+    final GrpcRegisterProjectResponse registerProjectResponse1 = kGenProgClusterBlockingStub.registerProject(
+        registerProjectRequest1);
+    return registerProjectResponse1.getProjectId();
   }
 }
