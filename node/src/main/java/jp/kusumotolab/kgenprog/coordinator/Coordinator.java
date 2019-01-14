@@ -2,9 +2,9 @@ package jp.kusumotolab.kgenprog.coordinator;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,8 +38,8 @@ public class Coordinator {
   private final AtomicInteger idCounter;
   private final LoadBalancer loadBalancer = new LoadBalancer();
   private final List<ServerServiceDefinition> services = new ArrayList<>();
-  private final Map<Integer, ByteString> binaryMap = new HashMap<>();
-  private final Map<Integer, GrpcConfiguration> configurationMap = new HashMap<>();
+  private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap = new ConcurrentHashMap<>();
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
