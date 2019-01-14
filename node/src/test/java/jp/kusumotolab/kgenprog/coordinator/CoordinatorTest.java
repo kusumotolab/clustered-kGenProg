@@ -65,24 +65,6 @@ public class CoordinatorTest {
   }
 
   @Test
-  public void testRegisterProject() {
-    // レスポンスのモック作成
-    final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-        .setStatus(Coordinator.STATUS_SUCCESS)
-        .build();
-
-    // registerProject実行
-    final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-        .build();
-    final GrpcRegisterProjectResponse response1 = stub.registerProject(request);
-
-    // requestは成功するはず
-    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(response1.getProjectId()).isEqualTo(response.getProjectId());
-  }
-
-  @Test
   public void testExecuteTest() {
     // レスポンスのモック作成
     final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
