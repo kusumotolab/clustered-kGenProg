@@ -26,7 +26,7 @@ public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
   private final Path workdir;
-  private CoordinatorClient coordinatorClient;
+  private final CoordinatorClient coordinatorClient;
 
   public LocalWorker(final Path workdir, final CoordinatorClient coordinatorClient) {
     this.workdir = workdir;
@@ -37,7 +37,7 @@ public class LocalWorker implements Worker {
   @Override
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     final Single<GrpcExecuteTestResponse> responseSingle;
-    Project project = getProject(request.getProjectId());
+    final Project project = getProject(request.getProjectId());
 
     final Path rootPath = project.getConfiguration()
         .getTargetProject().rootPath;

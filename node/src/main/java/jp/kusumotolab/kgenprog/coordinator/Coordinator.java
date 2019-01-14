@@ -175,7 +175,7 @@ public class Coordinator {
     log.debug(response.toString());
   }
 
-  public List<ServerServiceDefinition> getServices() {
+  protected List<ServerServiceDefinition> getServices() {
     return services;
   }
 
