@@ -28,13 +28,17 @@ public class WorkerService extends KGenProgClusterImplBase {
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-    final GrpcExecuteTestResponse response = responseSingle.blockingGet();
+    responseSingle.subscribe(response -> {
+      log.info("executeTest response");
+      log.debug(response.toString());
 
-    log.info("executeTest response");
-    log.debug(response.toString());
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    }, e -> {
+      log.error(e.toString());
+      responseObserver.onError(e);
+    });
 
-    responseObserver.onNext(response);
-    responseObserver.onCompleted();
   }
 
   @Override
@@ -44,12 +48,16 @@ public class WorkerService extends KGenProgClusterImplBase {
     log.debug(request.toString());
 
     final Single<GrpcUnregisterProjectResponse> responseSingle = worker.unregisterProject(request);
-    final GrpcUnregisterProjectResponse response = responseSingle.blockingGet();
 
-    log.info("unregisterProject response");
-    log.debug(response.toString());
+    responseSingle.subscribe(response -> {
+      log.info("unregisterProject response");
+      log.debug(response.toString());
 
-    responseObserver.onNext(response);
-    responseObserver.onCompleted();
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+    }, e -> {
+      log.error(e.toString());
+      responseObserver.onError(e);
+    });
   }
 }
