@@ -23,8 +23,6 @@ import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.testing.GrpcCleanupRule;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc;
-import jp.kusumotolab.kgenprog.grpc.CoordinatorServiceGrpc.CoordinatorServiceBlockingStub;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
@@ -101,9 +99,6 @@ public class LocalWorkerTest {
 
   @Test
   public void testUnregisterProject() throws IOException {
-    final CoordinatorServiceBlockingStub mockCoordinatorService = CoordinatorServiceGrpc.newBlockingStub(
-        managedChannel);
-
     // Workerの作成
     final Project project = mock(Project.class);
     final CoordinatorClient coordinatorClient = spy(new CoordinatorClient(managedChannel));
