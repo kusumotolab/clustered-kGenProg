@@ -32,7 +32,7 @@ public class ProjectZipperTest {
         .getResolvedPath();
     final Path originJUnit = targetProject.getClassPaths()
         .stream()
-        .filter(v -> v.path.endsWith("junit-4.12.jar"))
+        .filter(v -> v.path.endsWith("junit-4.12-kgp-custom.jar"))
         .findFirst()
         .get().path;
     final Path originHamcrest = targetProject.getClassPaths()
@@ -45,7 +45,7 @@ public class ProjectZipperTest {
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     final TargetProject zip = ProjectZipper.zipProject(targetProject, () -> outputStream);
 
-    final Path zipJUnit = ProjectZipper.CLASSPATH_PREFIX.resolve("junit-4.12.jar");
+    final Path zipJUnit = ProjectZipper.CLASSPATH_PREFIX.resolve("junit-4.12-kgp-custom.jar");
     final Path zipHamcrest = ProjectZipper.CLASSPATH_PREFIX.resolve("hamcrest-core-1.3.jar");
 
     // 変換されたTargetProjectの確認
@@ -66,7 +66,7 @@ public class ProjectZipperTest {
     final Path unzipFoo = unzip.rootPath.resolve("src/example/Foo.java");
     final Path unzipFooTest = unzip.rootPath.resolve("src/example/FooTest.java");
     final Path unzipJUnit = destination.resolve(ProjectZipper.CLASSPATH_PREFIX)
-        .resolve("junit-4.12.jar");
+        .resolve("junit-4.12-kgp-custom.jar");
     final Path unzipHamcrest = destination.resolve(ProjectZipper.CLASSPATH_PREFIX)
         .resolve("hamcrest-core-1.3.jar");
 
