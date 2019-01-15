@@ -30,9 +30,10 @@ import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
 import jp.kusumotolab.kgenprog.Configuration;
+import jp.kusumotolab.kgenprog.coordinator.Coordinator;
+import jp.kusumotolab.kgenprog.coordinator.KGenProgCluster;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
 import jp.kusumotolab.kgenprog.ga.variant.Variant;
-import jp.kusumotolab.kgenprog.grpc.Coordinator;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
@@ -134,7 +135,7 @@ public class RemoteTestExecutorTest {
 
     final Server server = InProcessServerBuilder.forName(name)
         .directExecutor()
-        .addService(coordinator)
+        .addService(new KGenProgCluster(coordinator))
         .build()
         .start();
     grpcCleanupRule.register(server);

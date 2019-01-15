@@ -101,7 +101,7 @@ public class ProjectTest {
         .toBuilder(), targetProject)
         .build();
 
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
+    final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
         .setConfiguration(grpcConfig)
         .setProject(ByteString.copyFrom(stream.toByteArray()))
         .build();
@@ -110,7 +110,7 @@ public class ProjectTest {
         .toPath();
 
     // Projectでのテスト実行
-    final Project project = new Project(workdir, request, 0);
+    final Project project = new Project(workdir, response, 0);
     final TestResults remoteResults = project.executeTest(gene);
 
     // TestResultsが等しいか確認する

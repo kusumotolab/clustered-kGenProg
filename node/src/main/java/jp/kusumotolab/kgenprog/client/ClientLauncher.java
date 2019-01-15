@@ -1,5 +1,6 @@
 package jp.kusumotolab.kgenprog.client;
 
+import java.util.List;
 import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,9 @@ import jp.kusumotolab.kgenprog.ga.selection.DefaultVariantSelection;
 import jp.kusumotolab.kgenprog.ga.selection.VariantSelection;
 import jp.kusumotolab.kgenprog.ga.validation.DefaultCodeValidation;
 import jp.kusumotolab.kgenprog.ga.validation.SourceCodeValidation;
+import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.output.PatchGenerator;
+import jp.kusumotolab.kgenprog.project.test.ParallelTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
 
 public class ClientLauncher {
@@ -50,13 +53,15 @@ public class ClientLauncher {
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
     final TestExecutor testExecutor = new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
+    final ParallelTestExecutor parallelTestExecutor = new ParallelTestExecutor(testExecutor);
     final PatchGenerator patchGenerator = new PatchGenerator();
 
     final KGenProgMain kGenProgMain =
         new KGenProgMain(config, faultLocalization, mutation, crossover, sourceCodeGeneration,
-            sourceCodeValidation, variantSelection, testExecutor, patchGenerator);
+            sourceCodeValidation, variantSelection, parallelTestExecutor, patchGenerator);
 
-    kGenProgMain.run();
+    final List<Variant> variants = kGenProgMain.run();
+    System.out.println("size: " + variants.size());
   }
 
   private void setLogLevel(final Level logLevel) {

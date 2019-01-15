@@ -1,24 +1,37 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.io.IOException;
-import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
+import io.grpc.ServerServiceDefinition;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.testing.GrpcCleanupRule;
 import io.reactivex.Single;
+import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterBlockingStub;
+import jp.kusumotolab.kgenprog.grpc.Worker;
+import jp.kusumotolab.kgenprog.worker.CoordinatorClient;
 
 
 public class CoordinatorTest {
@@ -32,8 +45,7 @@ public class CoordinatorTest {
   private final InProcessChannelBuilder channelBuilder = InProcessChannelBuilder.forName(serverName)
       .directExecutor();
 
-  private KGenProgClusterBlockingStub stub;
-  private Worker worker;
+  private ManagedChannel channel;
   private Coordinator coordinator;
 
 
@@ -41,61 +53,15 @@ public class CoordinatorTest {
   public void setup() throws IOException {
     final ClusterConfiguration config = new ClusterConfiguration.Builder().build();
 
-    worker = mock(Worker.class);
-    coordinator = new Coordinator(config, worker);
-    grpcCleanup.register(serverBuilder.addService(coordinator)
-        .build()
+    coordinator = spy(new Coordinator(config));
+
+    for (final ServerServiceDefinition service : coordinator.getServices()) {
+      serverBuilder.addService(service);
+    }
+
+    grpcCleanup.register(serverBuilder.build()
         .start());
-    final ManagedChannel channel = grpcCleanup.register(channelBuilder.build());
-    stub = KGenProgClusterGrpc.newBlockingStub(channel);
-  }
-
-  @Test
-  public void testRegisterProject() {
-    // レスポンスのモック作成
-    final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-        .setStatus(Coordinator.STATUS_SUCCESS)
-        .build();
-
-    final Single<GrpcRegisterProjectResponse> responseSingle = Single.just(response);
-
-    when(worker.registerProject(any(), anyInt())).thenReturn(responseSingle);
-
-    // registerProject実行
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-        .build();
-    final GrpcRegisterProjectResponse response1 = stub.registerProject(request);
-
-    // requestは成功するはず
-    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(response1.getProjectId()).isEqualTo(response.getProjectId());
-
-    // もう一度呼び出し
-    stub.registerProject(request);
-
-    // LocalWorkerへの引数の確認
-    final ArgumentCaptor<Integer> captor = ArgumentCaptor.forClass(Integer.class);
-    verify(worker, times(2)).registerProject(any(), captor.capture());
-
-    // projectIdは異なるはず
-    final List<Integer> values = captor.getAllValues();
-    assertThat(values).hasSize(2);
-    assertThat(values.get(0)).isNotEqualTo(values.get(1));
-  }
-
-  @Test
-  public void testRegisterProjectError() {
-    // Errorを起こしたSingleを生成
-    final Single<GrpcRegisterProjectResponse> responseSingle = Single.error(new Exception());
-    when(worker.registerProject(any(), anyInt())).thenReturn(responseSingle);
-
-    // registerProject実行
-    final GrpcRegisterProjectRequest request = GrpcRegisterProjectRequest.newBuilder()
-        .build();
-    final GrpcRegisterProjectResponse response = stub.registerProject(request);
-
-    // requestが失敗するはず
-    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
+    channel = grpcCleanup.register(channelBuilder.build());
   }
 
   @Test
@@ -106,9 +72,12 @@ public class CoordinatorTest {
         .build();
     final Single<GrpcExecuteTestResponse> responseSingle = Single.just(response);
 
+    final Worker worker = mock(Worker.class);
     when(worker.executeTest(any())).thenReturn(responseSingle);
+    coordinator.addWorkerToLoadBalancer(worker);
 
     // executeTest実行
+    final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
     final GrpcExecuteTestRequest executeTestRequest = GrpcExecuteTestRequest.newBuilder()
         .build();
     final GrpcExecuteTestResponse executeTestResponse = stub.executeTest(executeTestRequest);
@@ -126,10 +95,13 @@ public class CoordinatorTest {
   @Test
   public void testExecuteTestError() {
     // Errorを起こしたSingleを生成
+    final Worker worker = mock(Worker.class);
     final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
     when(worker.executeTest(any())).thenReturn(responseSingle);
+    coordinator.addWorkerToLoadBalancer(worker);
 
     // executeTest実行
+    final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
     final GrpcExecuteTestRequest executeTestRequest = GrpcExecuteTestRequest.newBuilder()
         .build();
     final GrpcExecuteTestResponse executeTestResponse = stub.executeTest(executeTestRequest);
@@ -141,6 +113,7 @@ public class CoordinatorTest {
   @Test
   public void testUnregisterProject() {
     // レスポンスのモック作成
+    final Worker worker = mock(Worker.class);
     final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
         .setStatus(Coordinator.STATUS_SUCCESS)
         .build();
@@ -149,6 +122,7 @@ public class CoordinatorTest {
     when(worker.unregisterProject(any())).thenReturn(responseSingle);
 
     // unregisterProject実行
+    final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
     final GrpcUnregisterProjectRequest unregisterProjectRequest =
         GrpcUnregisterProjectRequest.newBuilder()
             .build();
@@ -157,28 +131,42 @@ public class CoordinatorTest {
 
     // レスポンス確認
     assertThat(unregisterProjectResponse).isEqualTo(response);
-
-    // リクエスト確認
-    final ArgumentCaptor<GrpcUnregisterProjectRequest> captor =
-        ArgumentCaptor.forClass(GrpcUnregisterProjectRequest.class);
-    verify(worker, times(1)).unregisterProject(captor.capture());
-    assertThat(captor.getValue()).isEqualTo(unregisterProjectRequest);
   }
 
   @Test
-  public void testUnregisterProjectError() {
-    // Errorを起こしたSingleを生成
-    final Single<GrpcUnregisterProjectResponse> responseSingle = Single.error(new Exception());
-    when(worker.unregisterProject(any())).thenReturn(responseSingle);
+  public void testRegisterWorker() {
+    final CoordinatorClient coordinatorClient = new CoordinatorClient(channel);
+    final GrpcRegisterWorkerResponse response = coordinatorClient.registerWorker("name", 100);
+    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+  }
 
-    // unregisterProject実行
-    final GrpcUnregisterProjectRequest unregisterProjectRequest =
-        GrpcUnregisterProjectRequest.newBuilder()
-            .build();
-    final GrpcUnregisterProjectResponse unregisterProjectResponse =
-        stub.unregisterProject(unregisterProjectRequest);
+  @Test
+  public void testGetProject() {
+    final int projectId1 = registerBinary(ByteString.copyFromUtf8("kGenProg"));
+    final int projectId2 = registerBinary(ByteString.copyFromUtf8("kusumoto-lab"));
 
-    // レスポンス確認
-    assertThat(unregisterProjectResponse.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
+    final CoordinatorClient coordinatorClient = new CoordinatorClient(channel);
+    final GrpcGetProjectResponse response1 = coordinatorClient.getProject(projectId1);
+    final GrpcGetProjectResponse response2 = coordinatorClient.getProject(projectId2);
+
+    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+    assertThat(response2.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+
+    assertThat(response1.getProject()
+        .toStringUtf8()).isEqualTo("kGenProg");
+    assertThat(response2.getProject()
+        .toStringUtf8()).isEqualTo("kusumoto-lab");
+
+  }
+
+  private int registerBinary(final ByteString byteString) {
+    final KGenProgClusterBlockingStub kGenProgClusterBlockingStub = KGenProgClusterGrpc.newBlockingStub(
+        channel);
+    final GrpcRegisterProjectRequest registerProjectRequest1 = GrpcRegisterProjectRequest.newBuilder()
+        .setProject(byteString)
+        .build();
+    final GrpcRegisterProjectResponse registerProjectResponse1 = kGenProgClusterBlockingStub.registerProject(
+        registerProjectRequest1);
+    return registerProjectResponse1.getProjectId();
   }
 }

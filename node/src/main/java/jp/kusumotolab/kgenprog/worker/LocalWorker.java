@@ -1,72 +1,66 @@
-package jp.kusumotolab.kgenprog.grpc;
+package jp.kusumotolab.kgenprog.worker;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import io.reactivex.Single;
+import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
+import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.Project;
+import jp.kusumotolab.kgenprog.grpc.Serializer;
+import jp.kusumotolab.kgenprog.grpc.Worker;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 /**
  * ローカルでテストを実行するワーカー
- * 
- * @author Ryo Arima
  *
+ * @author Ryo Arima
  */
 public class LocalWorker implements Worker {
 
   private final ConcurrentMap<Integer, Project> projectMap;
   private final Path workdir;
+  private final CoordinatorClient coordinatorClient;
 
-  public LocalWorker(final Path workdir) {
+  public LocalWorker(final Path workdir, final CoordinatorClient coordinatorClient) {
     this.workdir = workdir;
+    this.coordinatorClient = coordinatorClient;
     projectMap = new ConcurrentHashMap<>();
-  }
-
-  @Override
-  public Single<GrpcRegisterProjectResponse> registerProject(
-      final GrpcRegisterProjectRequest request, final int projectId) {
-    try {
-      final Project project = createProject(request, projectId);
-      projectMap.put(projectId, project);
-
-      final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-          .setProjectId(projectId)
-          .setStatus(Coordinator.STATUS_SUCCESS)
-          .build();
-
-      return Single.just(response);
-
-    } catch (final Exception e) {
-      return Single.error(e);
-    }
   }
 
   @Override
   public Single<GrpcExecuteTestResponse> executeTest(final GrpcExecuteTestRequest request) {
     final Single<GrpcExecuteTestResponse> responseSingle;
-    final Project project = projectMap.get(request.getProjectId());
-    if (project == null) {
-      // プロジェクトが見つからなかった場合、実行失敗メッセージを返す
-      final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_FAILED)
-          .build();
-      responseSingle = Single.just(response);
+    final Project project = getProject(request.getProjectId());
 
-    } else {
-      final Path rootPath = project.getConfiguration()
-          .getTargetProject().rootPath;
-      final Gene gene = Serializer.deserialize(rootPath, request.getGene());
-      final Single<Gene> geneSingle = Single.just(gene);
-      final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
-      responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
-          .setTestResults(Serializer.serialize(results))
-          .build());
-    }
+    final Path rootPath = project.getConfiguration()
+        .getTargetProject().rootPath;
+    final Gene gene = Serializer.deserialize(rootPath, request.getGene());
+    final Single<Gene> geneSingle = Single.just(gene);
+    final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
+    responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
+        .setStatus(Coordinator.STATUS_SUCCESS)
+        .setTestResults(Serializer.serialize(results))
+        .build());
 
     return responseSingle;
+  }
+
+  Project getProject(final int projectId) {
+    return projectMap.computeIfAbsent(projectId, id -> {
+      final GrpcGetProjectResponse response = coordinatorClient.getProject(id);
+      try {
+        return createProject(response, id);
+      } catch (final IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
   @Override
@@ -96,18 +90,16 @@ public class LocalWorker implements Worker {
 
   /**
    * 新たなプロジェクトを生成する
-   * 
+   *
    * テストの際にモックとして差し替えることを想定している
-   * 
-   * @param request プロジェクトID
+   *
+   * @param response プロジェクトID
    * @param projectId プロジェクトのConfiguration
    * @return 生成されたプロジェクト
    * @throws IOException
    */
-  protected Project createProject(final GrpcRegisterProjectRequest request, final int projectId)
+  protected Project createProject(final GrpcGetProjectResponse response, final int projectId)
       throws IOException {
-    return new Project(workdir, request, projectId);
+    return new Project(workdir, response, projectId);
   }
-
-
 }
