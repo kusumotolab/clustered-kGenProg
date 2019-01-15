@@ -1,6 +1,5 @@
 package jp.kusumotolab.kgenprog.client;
 
-import java.util.List;
 import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +11,9 @@ import jp.kusumotolab.kgenprog.fl.Ochiai;
 import jp.kusumotolab.kgenprog.ga.codegeneration.DefaultSourceCodeGeneration;
 import jp.kusumotolab.kgenprog.ga.codegeneration.SourceCodeGeneration;
 import jp.kusumotolab.kgenprog.ga.crossover.Crossover;
-import jp.kusumotolab.kgenprog.ga.crossover.SinglePointCrossover;
+import jp.kusumotolab.kgenprog.ga.crossover.FirstVariantRandomSelection;
+import jp.kusumotolab.kgenprog.ga.crossover.RandomCrossover;
+import jp.kusumotolab.kgenprog.ga.crossover.SecondVariantRandomSelection;
 import jp.kusumotolab.kgenprog.ga.mutation.Mutation;
 import jp.kusumotolab.kgenprog.ga.mutation.RandomMutation;
 import jp.kusumotolab.kgenprog.ga.mutation.selection.RouletteStatementSelection;
@@ -20,7 +21,6 @@ import jp.kusumotolab.kgenprog.ga.selection.DefaultVariantSelection;
 import jp.kusumotolab.kgenprog.ga.selection.VariantSelection;
 import jp.kusumotolab.kgenprog.ga.validation.DefaultCodeValidation;
 import jp.kusumotolab.kgenprog.ga.validation.SourceCodeValidation;
-import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.output.PatchGenerator;
 import jp.kusumotolab.kgenprog.project.test.ParallelTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
@@ -47,8 +47,8 @@ public class ClientLauncher {
         new RouletteStatementSelection(random);
     final Mutation mutation = new RandomMutation(config.getMutationGeneratingCount(), random,
         rouletteStatementSelection, config.getScope());
-    final Crossover crossover =
-        new SinglePointCrossover(random, config.getCrossoverGeneratingCount());
+    final Crossover crossover = new RandomCrossover(random, new FirstVariantRandomSelection(random),
+        new SecondVariantRandomSelection(random), config.getCrossoverGeneratingCount());
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
@@ -60,8 +60,7 @@ public class ClientLauncher {
         new KGenProgMain(config, faultLocalization, mutation, crossover, sourceCodeGeneration,
             sourceCodeValidation, variantSelection, parallelTestExecutor, patchGenerator);
 
-    final List<Variant> variants = kGenProgMain.run();
-    System.out.println("size: " + variants.size());
+    kGenProgMain.run();
   }
 
   private void setLogLevel(final Level logLevel) {
