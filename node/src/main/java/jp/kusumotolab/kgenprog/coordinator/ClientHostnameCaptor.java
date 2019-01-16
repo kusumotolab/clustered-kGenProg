@@ -1,6 +1,7 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import io.grpc.Context;
 import io.grpc.Contexts;
 import io.grpc.Grpc;
@@ -17,10 +18,20 @@ public class ClientHostnameCaptor implements ServerInterceptor {
   @Override
   public <ReqT, RespT> Listener<ReqT> interceptCall(final ServerCall<ReqT, RespT> call,
       final Metadata headers, final ServerCallHandler<ReqT, RespT> next) {
-    final InetSocketAddress client = (InetSocketAddress) call.getAttributes()
+
+    final String hostname;
+    final SocketAddress socketAddress = call.getAttributes()
         .get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR);
-    final Context context = Context.current()
-        .withValue(hostnameKey, client.getHostName());
+
+    if (socketAddress instanceof InetSocketAddress) {
+      final InetSocketAddress client = (InetSocketAddress) socketAddress;
+      hostname = client.getHostName();
+    } else {
+      hostname = "localhost";
+    }
+
+    Context context = Context.current()
+        .withValue(hostnameKey, hostname);
     return Contexts.interceptCall(context, call, headers, next);
   }
 
