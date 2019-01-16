@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
@@ -40,6 +41,8 @@ public class RemoteTestExecutor implements TestExecutor {
     this.config = config;
     final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
+        .keepAliveTime(60, TimeUnit.SECONDS)
+        .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
   }

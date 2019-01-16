@@ -49,6 +49,7 @@ public class Coordinator {
         .addService(new KGenProgCluster(this))
         .addService(
             ServerInterceptors.intercept(new CoordinatorService(this), clientHostNameCaptor))
+        .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
 
     services.addAll(server.getServices());

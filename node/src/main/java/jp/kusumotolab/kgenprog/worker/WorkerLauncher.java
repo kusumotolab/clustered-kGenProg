@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
@@ -25,6 +26,8 @@ public class WorkerLauncher {
     final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(configuration.getHost(),
         configuration.getPort())
         .usePlaintext()
+        .maxInboundMessageSize(Integer.MAX_VALUE)
+        .keepAliveTime(60, TimeUnit.SECONDS)
         .build();
 
     final CoordinatorClient coordinatorClient = new CoordinatorClient(managedChannel);
@@ -42,6 +45,7 @@ public class WorkerLauncher {
     final Server server = ServerBuilder.forPort(freePort)
         .addService(workerService)
         .executor(Executors.newSingleThreadExecutor())
+        .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
     try {
       server.start();

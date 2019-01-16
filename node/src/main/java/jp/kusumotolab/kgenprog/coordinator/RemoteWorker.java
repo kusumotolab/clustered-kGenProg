@@ -1,5 +1,6 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
+import java.util.concurrent.TimeUnit;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.reactivex.Single;
@@ -18,6 +19,8 @@ public class RemoteWorker implements Worker {
   public RemoteWorker(final String name, final int port) {
     final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
+        .keepAliveTime(60, TimeUnit.SECONDS)
+        .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
   }
