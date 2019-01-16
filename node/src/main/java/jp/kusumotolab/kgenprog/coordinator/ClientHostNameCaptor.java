@@ -30,7 +30,7 @@ public class ClientHostNameCaptor implements ServerInterceptor {
       hostName = "localhost";
     }
 
-    Context context = Context.current()
+    final Context context = Context.current()
         .withValue(hostNameKey, hostName);
     return Contexts.interceptCall(context, call, headers, next);
   }
