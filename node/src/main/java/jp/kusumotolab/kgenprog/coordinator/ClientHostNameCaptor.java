@@ -11,32 +11,32 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 
-public class ClientHostnameCaptor implements ServerInterceptor {
+public class ClientHostNameCaptor implements ServerInterceptor {
 
-  private final Context.Key<String> hostnameKey = Context.key("CLIENT_HOSTNAME");
+  private final Context.Key<String> hostNameKey = Context.key("CLIENT_HOST_NAME");
 
   @Override
   public <ReqT, RespT> Listener<ReqT> interceptCall(final ServerCall<ReqT, RespT> call,
       final Metadata headers, final ServerCallHandler<ReqT, RespT> next) {
 
-    final String hostname;
+    final String hostName;
     final SocketAddress socketAddress = call.getAttributes()
         .get(Grpc.TRANSPORT_ATTR_REMOTE_ADDR);
 
     if (socketAddress instanceof InetSocketAddress) {
       final InetSocketAddress client = (InetSocketAddress) socketAddress;
-      hostname = client.getHostName();
+      hostName = client.getHostName();
     } else {
-      hostname = "localhost";
+      hostName = "localhost";
     }
 
     Context context = Context.current()
-        .withValue(hostnameKey, hostname);
+        .withValue(hostNameKey, hostName);
     return Contexts.interceptCall(context, call, headers, next);
   }
 
-  public String getHostname() {
-    return hostnameKey.get();
+  public String getHostName() {
+    return hostNameKey.get();
   }
 
 }
