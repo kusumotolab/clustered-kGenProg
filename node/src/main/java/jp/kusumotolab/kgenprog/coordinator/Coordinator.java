@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Single;
@@ -39,12 +40,15 @@ public class Coordinator {
   private final LoadBalancer loadBalancer = new LoadBalancer();
   private final List<ServerServiceDefinition> services = new ArrayList<>();
   private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap =
+      new ConcurrentHashMap<>();
+  private final ClientHostnameCaptor clientHostNameCaptor = new ClientHostnameCaptor();
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
-        .addService(new CoordinatorService(this))
+        .addService(
+            ServerInterceptors.intercept(new CoordinatorService(this), clientHostNameCaptor))
         .build();
 
     services.addAll(server.getServices());
@@ -115,7 +119,9 @@ public class Coordinator {
     log.debug(request.toString());
 
     for (final Worker worker : loadBalancer.getWorkerList()) {
-      worker.unregisterProject(request).subscribe(r -> { }, e -> log.error(e.toString()));
+      worker.unregisterProject(request)
+          .subscribe(r -> {
+          }, e -> log.error(e.toString()));
     }
 
     binaryMap.remove(request.getProjectId());
@@ -134,8 +140,10 @@ public class Coordinator {
       final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
     log.info("registerWorker request");
     log.debug(request.toString());
+    final String hostname = clientHostNameCaptor.getHostName();
+    log.info("Client hostname: " + hostname);
 
-    final Worker remoteWorker = createWorker(request.getHost(), request.getPort());
+    final Worker remoteWorker = createWorker(hostname, request.getPort());
     addWorkerToLoadBalancer(remoteWorker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
