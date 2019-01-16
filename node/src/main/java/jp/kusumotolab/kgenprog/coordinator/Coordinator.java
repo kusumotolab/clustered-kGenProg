@@ -42,13 +42,13 @@ public class Coordinator {
   private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap =
       new ConcurrentHashMap<>();
-  private final ClientHostnameCaptor clientHostNameCaptor = new ClientHostnameCaptor();
+  private final ClientHostnameCaptor clientHostnameCaptor = new ClientHostnameCaptor();
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
         .addService(
-            ServerInterceptors.intercept(new CoordinatorService(this), clientHostNameCaptor))
+            ServerInterceptors.intercept(new CoordinatorService(this), clientHostnameCaptor))
         .build();
 
     services.addAll(server.getServices());
@@ -140,7 +140,7 @@ public class Coordinator {
       final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
     log.info("registerWorker request");
     log.debug(request.toString());
-    final String hostname = clientHostNameCaptor.getHostName();
+    final String hostname = clientHostnameCaptor.getHostname();
     log.info("Client hostname: " + hostname);
 
     final Worker remoteWorker = createWorker(hostname, request.getPort());

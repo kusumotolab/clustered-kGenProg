@@ -271,14 +271,9 @@ message GrpcUnregisterProjectResponse {
 
 message GrpcRegisterWorkerRequest {
   /*
-   * 登録するワーカーのホスト名
-   */
-  string host = 1;
-
-  /*
    * 登録するワーカーのポート番号
    */
-  int32 port = 2;
+  int32 port = 1;
 }
 
 message GrpcRegisterWorkerResponse {

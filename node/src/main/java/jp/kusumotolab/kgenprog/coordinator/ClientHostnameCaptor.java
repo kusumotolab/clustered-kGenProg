@@ -12,7 +12,7 @@ import io.grpc.ServerInterceptor;
 
 public class ClientHostnameCaptor implements ServerInterceptor {
 
-  private final Context.Key<String> hostnameKey = Context.key("CLIENT_HOST_NAME");
+  private final Context.Key<String> hostnameKey = Context.key("CLIENT_HOSTNAME");
 
   @Override
   public <ReqT, RespT> Listener<ReqT> interceptCall(final ServerCall<ReqT, RespT> call,
@@ -24,7 +24,7 @@ public class ClientHostnameCaptor implements ServerInterceptor {
     return Contexts.interceptCall(context, call, headers, next);
   }
 
-  public String getHostName() {
+  public String getHostname() {
     return hostnameKey.get();
   }
 

@@ -136,7 +136,7 @@ public class CoordinatorTest {
   @Test
   public void testRegisterWorker() {
     final CoordinatorClient coordinatorClient = new CoordinatorClient(channel);
-    final GrpcRegisterWorkerResponse response = coordinatorClient.registerWorker("name", 100);
+    final GrpcRegisterWorkerResponse response = coordinatorClient.registerWorker(100);
     assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
   }
 
