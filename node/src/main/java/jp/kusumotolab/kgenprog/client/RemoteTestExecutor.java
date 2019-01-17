@@ -4,12 +4,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
@@ -43,7 +42,6 @@ public class RemoteTestExecutor implements TestExecutor {
   private final KGenProgClusterFutureStub futureStub;
   private final Configuration config;
   private Optional<Integer> projectId = Optional.empty();
-  private ListeningExecutorService pool;
 
   public RemoteTestExecutor(final Configuration config, final String name, final int port) {
     this.config = config;
@@ -52,7 +50,6 @@ public class RemoteTestExecutor implements TestExecutor {
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
     futureStub = KGenProgClusterGrpc.newFutureStub(managedChannel);
-    pool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(10));
   }
 
   public RemoteTestExecutor(final Configuration config, final ManagedChannel managedChannel) {
@@ -68,50 +65,30 @@ public class RemoteTestExecutor implements TestExecutor {
       return Single.just(EmptyTestResults.instance);
     }
 
+    final Single<TestResults> testResultsSingle = variantSingle.flatMap(this::requestExecutingTest)
+        .map(this::deserializeResponse);
 
-    final Single<ListenableFuture<GrpcExecuteTestResponse>> requestSingle =
-        variantSingle.map(variant -> {
+    return testResultsSingle;
+  }
 
-          final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
-              .setProjectId(projectId.get())
-              .setGene(Serializer.serialize(variant.getGene()))
-              .build();
-          log.debug("executeTest request");
-          log.debug(request.toString());
+  private Single<GrpcExecuteTestResponse> requestExecutingTest(final Variant variant) {
+    final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+        .setProjectId(projectId.get())
+        .setGene(Serializer.serialize(variant.getGene()))
+        .build();
 
+    log.debug("executeTest request");
+    log.debug(request.toString());
 
-          final ListenableFuture<GrpcExecuteTestResponse> listenableFuture =
-              futureStub.executeTest(request);
-          return listenableFuture;
-        });
+    return toSingle(futureStub.executeTest(request));
+  }
 
-    return requestSingle.flatMap(future -> {
-      final Single<TestResults> results = Single.create(subscriber -> {
-        future.addListener(() -> {
-          GrpcExecuteTestResponse response;
-          try {
-            response = future.get();
-          } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException(e);
-          }
+  private TestResults deserializeResponse(final GrpcExecuteTestResponse response) {
+    log.debug("executeTest response");
+    log.debug(response.toString());
 
-          if (response.getStatus() == Coordinator.STATUS_FAILED) {
-            log.error("failed to executeTest");
-            subscriber.onSuccess(EmptyTestResults.instance);
-            return;
-          }
-
-          final Path rootPath = config.getTargetProject().rootPath;
-          final TestResults testResults =
-              Serializer.deserialize(rootPath, response.getTestResults());
-          subscriber.onSuccess(testResults);
-          log.debug("executeTest response");
-          log.debug(response.toString());
-        }, pool);
-      });
-      return results;
-
-    });
+    final Path rootPath = config.getTargetProject().rootPath;
+    return Serializer.deserialize(rootPath, response.getTestResults());
   }
 
   @Override
@@ -185,5 +162,23 @@ public class RemoteTestExecutor implements TestExecutor {
   @Override
   public TestResults exec(final Variant variant) {
     throw new UnsupportedOperationException();
+  }
+
+  private static <T> Single<T> toSingle(final ListenableFuture<T> listenableFuture) {
+    return Single.create(subscriber -> {
+      Futures.addCallback(listenableFuture, new FutureCallback<T>() {
+
+        @Override
+        public void onSuccess(final T result) {
+          subscriber.onSuccess(result);
+        }
+
+        @Override
+        public void onFailure(final Throwable t) {
+          subscriber.onError(t);
+        }
+
+      }, MoreExecutors.directExecutor());
+    });
   }
 }
