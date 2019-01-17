@@ -10,6 +10,7 @@ import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
+import io.grpc.inprocess.InProcessSocketAddress;
 
 public class ClientHostNameCaptor implements ServerInterceptor {
 
@@ -26,8 +27,11 @@ public class ClientHostNameCaptor implements ServerInterceptor {
     if (socketAddress instanceof InetSocketAddress) {
       final InetSocketAddress client = (InetSocketAddress) socketAddress;
       hostName = client.getHostName();
-    } else {
+    } else if (socketAddress instanceof InProcessSocketAddress) {
+      // テストのとき
       hostName = "localhost";
+    } else {
+      throw new RuntimeException();
     }
 
     final Context context = Context.current()
