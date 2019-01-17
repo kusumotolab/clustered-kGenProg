@@ -13,6 +13,7 @@ import io.grpc.ManagedChannelBuilder;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Variant;
+import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
@@ -41,7 +42,7 @@ public class RemoteTestExecutor implements TestExecutor {
     this.config = config;
     final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
-        .keepAliveTime(60, TimeUnit.SECONDS)
+        .keepAliveTime(ClusterConfiguration.DEFAULT_KEEPALIVE_SECONDS, TimeUnit.SECONDS)
         .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
