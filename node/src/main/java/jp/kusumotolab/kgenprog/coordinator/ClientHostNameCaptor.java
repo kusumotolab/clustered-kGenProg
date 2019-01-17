@@ -26,7 +26,7 @@ public class ClientHostNameCaptor implements ServerInterceptor {
 
     if (socketAddress instanceof InetSocketAddress) {
       final InetSocketAddress client = (InetSocketAddress) socketAddress;
-      hostName = client.getHostName();
+      hostName = client.getAddress().getHostAddress();
     } else if (socketAddress instanceof InProcessSocketAddress) {
       // テストのとき
       final InProcessSocketAddress client = (InProcessSocketAddress)socketAddress;
