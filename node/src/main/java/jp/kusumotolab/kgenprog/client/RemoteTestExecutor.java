@@ -87,6 +87,11 @@ public class RemoteTestExecutor implements TestExecutor {
     log.debug("executeTest response");
     log.debug(response.toString());
 
+    if (response.getStatus() == Coordinator.STATUS_FAILED) {
+      log.error("failed to executeTest");
+      return EmptyTestResults.instance;
+    }
+
     final Path rootPath = config.getTargetProject().rootPath;
     return Serializer.deserialize(rootPath, response.getTestResults());
   }
