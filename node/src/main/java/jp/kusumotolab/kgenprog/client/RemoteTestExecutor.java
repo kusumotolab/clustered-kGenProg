@@ -6,9 +6,14 @@ import java.nio.file.Path;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Variant;
@@ -21,6 +26,7 @@ import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterBlockingStub;
+import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc.KGenProgClusterFutureStub;
 import jp.kusumotolab.kgenprog.grpc.ProjectZipper;
 import jp.kusumotolab.kgenprog.grpc.Serializer;
 import jp.kusumotolab.kgenprog.project.factory.TargetProject;
@@ -33,6 +39,7 @@ public class RemoteTestExecutor implements TestExecutor {
   private static final Logger log = LoggerFactory.getLogger(RemoteTestExecutor.class);
 
   private final KGenProgClusterBlockingStub blockingStub;
+  private final KGenProgClusterFutureStub futureStub;
   private final Configuration config;
   private Optional<Integer> projectId = Optional.empty();
 
@@ -42,28 +49,41 @@ public class RemoteTestExecutor implements TestExecutor {
         .usePlaintext()
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
+    futureStub = KGenProgClusterGrpc.newFutureStub(managedChannel);
   }
 
   public RemoteTestExecutor(final Configuration config, final ManagedChannel managedChannel) {
     this.config = config;
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
+    futureStub = KGenProgClusterGrpc.newFutureStub(managedChannel);
   }
 
   @Override
-  public TestResults exec(final Variant variant) {
+  public Single<TestResults> execAsync(final Single<Variant> variantSingle) {
     if (!projectId.isPresent()) {
       log.error("project id is not present");
-      return EmptyTestResults.instance;
+      return Single.just(EmptyTestResults.instance);
     }
 
+    final Single<TestResults> testResultsSingle = variantSingle.flatMap(this::requestExecutingTest)
+        .map(this::deserializeResponse);
+
+    return testResultsSingle;
+  }
+
+  private Single<GrpcExecuteTestResponse> requestExecutingTest(final Variant variant) {
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
         .setProjectId(projectId.get())
         .setGene(Serializer.serialize(variant.getGene()))
         .build();
+
     log.debug("executeTest request");
     log.debug(request.toString());
 
-    final GrpcExecuteTestResponse response = blockingStub.executeTest(request);
+    return toSingle(futureStub.executeTest(request));
+  }
+
+  private TestResults deserializeResponse(final GrpcExecuteTestResponse response) {
     log.debug("executeTest response");
     log.debug(response.toString());
 
@@ -71,6 +91,7 @@ public class RemoteTestExecutor implements TestExecutor {
       log.error("failed to executeTest");
       return EmptyTestResults.instance;
     }
+
     final Path rootPath = config.getTargetProject().rootPath;
     return Serializer.deserialize(rootPath, response.getTestResults());
   }
@@ -141,5 +162,28 @@ public class RemoteTestExecutor implements TestExecutor {
 
   Optional<Integer> getProjectId() {
     return projectId;
+  }
+
+  @Override
+  public TestResults exec(final Variant variant) {
+    throw new UnsupportedOperationException();
+  }
+
+  private static <T> Single<T> toSingle(final ListenableFuture<T> listenableFuture) {
+    return Single.create(subscriber -> {
+      Futures.addCallback(listenableFuture, new FutureCallback<T>() {
+
+        @Override
+        public void onSuccess(final T result) {
+          subscriber.onSuccess(result);
+        }
+
+        @Override
+        public void onFailure(final Throwable t) {
+          subscriber.onError(t);
+        }
+
+      }, MoreExecutors.directExecutor());
+    });
   }
 }

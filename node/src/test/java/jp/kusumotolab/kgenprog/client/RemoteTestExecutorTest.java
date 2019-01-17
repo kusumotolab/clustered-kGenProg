@@ -29,6 +29,7 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.grpc.testing.GrpcCleanupRule;
+import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.coordinator.KGenProgCluster;
@@ -93,7 +94,8 @@ public class RemoteTestExecutorTest {
     final Variant variant = mock(Variant.class);
     when(variant.getGeneratedSourceCode()).thenReturn(source);
     when(variant.getGene()).thenReturn(new Gene(Collections.emptyList()));
-    final TestResults result = remoteTestExecutor.exec(variant);
+    final TestResults result = remoteTestExecutor.execAsync(Single.just(variant))
+        .blockingGet();
 
     // 実行されたテストは4個のはず
     assertThat(result.getExecutedTestFQNs()).containsExactlyInAnyOrder( //
@@ -161,8 +163,8 @@ public class RemoteTestExecutorTest {
 
     // 登録のモック処理
     doAnswer(invocation -> {
-      final StreamObserver<GrpcRegisterProjectResponse> responseObserver = invocation.getArgument(
-          1);
+      final StreamObserver<GrpcRegisterProjectResponse> responseObserver =
+          invocation.getArgument(1);
       final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
           .setStatus(Coordinator.STATUS_SUCCESS)
           .setProjectId(PROJECT_ID)
@@ -175,15 +177,16 @@ public class RemoteTestExecutorTest {
 
     // 登録解除のモック処理
     doAnswer(invocation -> {
-      final StreamObserver<GrpcUnregisterProjectResponse> responseObserver = invocation.getArgument(
-          1);
+      final StreamObserver<GrpcUnregisterProjectResponse> responseObserver =
+          invocation.getArgument(1);
       final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
           .setStatus(Coordinator.STATUS_SUCCESS)
           .build();
       responseObserver.onNext(response);
       responseObserver.onCompleted();
       return null;
-    }).when(coordinator).unregisterProject(any(), any());
+    }).when(coordinator)
+        .unregisterProject(any(), any());
   }
 }
 
