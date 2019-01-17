@@ -1,9 +1,7 @@
 package jp.kusumotolab.kgenprog.worker;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,7 +29,6 @@ public class WorkerLauncher {
 
     final CoordinatorClient coordinatorClient = new CoordinatorClient(managedChannel);
     final int freePort = getFreePort();
-    final String name = getHostAddress();
 
     final Path path = Paths.get("worker-" + freePort);
     try {
@@ -48,7 +45,7 @@ public class WorkerLauncher {
         .build();
     try {
       server.start();
-      coordinatorClient.registerWorker(name, freePort);
+      coordinatorClient.registerWorker(freePort);
       server.awaitTermination();
     } catch (final IOException | InterruptedException e) {
       throw new RuntimeException(e);
@@ -64,14 +61,5 @@ public class WorkerLauncher {
       throw new RuntimeException(e);
     }
     return port;
-  }
-
-  private String getHostAddress() {
-    try {
-      final InetAddress address = InetAddress.getLocalHost();
-      return address.getHostAddress();
-    } catch (final UnknownHostException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

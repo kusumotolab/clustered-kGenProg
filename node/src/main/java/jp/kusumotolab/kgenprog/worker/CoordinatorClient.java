@@ -20,9 +20,8 @@ public class CoordinatorClient {
     blockingStub = CoordinatorServiceGrpc.newBlockingStub(managedChannel);
   }
 
-  public GrpcRegisterWorkerResponse registerWorker(final String name, final int port) {
+  public GrpcRegisterWorkerResponse registerWorker(final int port) {
     final GrpcRegisterWorkerRequest request = GrpcRegisterWorkerRequest.newBuilder()
-        .setHost(name)
         .setPort(port)
         .build();
     log.info("registerWorker request");
