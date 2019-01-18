@@ -1,0 +1,32 @@
+http://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000
+
+@startuml
+participant Client
+participant Coordinator
+participant Worker
+
+== Register worker ==
+Worker ->  Coordinator : register worker request \n (port)
+Worker <-- Coordinator : register worker response \n (status)
+
+== Register project ==
+Client ->  Coordinator : register project request \n (config, project zip)
+Client <-- Coordinator : register project response \n (status, project_id)
+
+== Execute test ==
+Client ->  Coordinator : execute test request \n (project_id, gene)
+Coordinator -> Worker : execute test request \n (project_id, gene)
+group First time
+  Worker -> Coordinator : get project request \n (project_id)
+  Worker <-- Coordinator : get project response \n (status, config, project zip)
+end
+Worker -> Worker : execute test
+Coordinator <-- Worker : execute test response \n (status, test_results)
+Client <-- Coordinator : execute test response \n (status, test_results)
+
+== Unregister project ==
+Client ->  Coordinator : unregister project request \n (project_id)
+Coordinator -> Worker : unregister project request \n (project_id)
+Coordinator <-- Worker : unregister project response \n (status)
+Client <-- Coordinator : unregister project response \n (status)
+@enduml
