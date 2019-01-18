@@ -40,7 +40,7 @@ public class WorkerLauncher {
     } catch (final IOException e) {
       throw new RuntimeException(e);
     }
-    final Worker worker = new LocalWorker(path, coordinatorClient);
+    final Worker worker = new LocalWorker(0, path, coordinatorClient);
     final WorkerService workerService = new WorkerService(worker);
 
     final Server server = ServerBuilder.forPort(freePort)
