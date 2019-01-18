@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
@@ -14,7 +16,10 @@ import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
+import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
@@ -44,6 +49,8 @@ public class Coordinator {
       new ConcurrentHashMap<>();
   private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
 
+  private final Subject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> subject = BehaviorSubject.create();
+
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
@@ -55,6 +62,38 @@ public class Coordinator {
     services.addAll(server.getServices());
 
     idCounter = new AtomicInteger(0);
+
+    final Object nullObject = new Object();
+    Observable.zip(subject, loadBalancer.getHotWorkerObserver(), ((pair, worker) -> {
+      this.executeTest(pair.getLeft(), pair.getValue(), worker);
+      return nullObject;
+    })).subscribe();
+  }
+
+  private void executeTest(final GrpcExecuteTestRequest request,
+      final StreamObserver<GrpcExecuteTestResponse> responseObserver, final Worker worker) {
+    log.info("executeTest request");
+    log.debug(request.toString());
+
+    final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
+
+    responseSingle.subscribe(response -> {
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      loadBalancer.finish(worker);
+      log.info("executeTest response");
+      log.debug(response.toString());
+
+    }, error -> {
+      final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
+          .setStatus(STATUS_FAILED)
+          .build();
+      responseObserver.onNext(response);
+      responseObserver.onCompleted();
+      loadBalancer.finish(worker);
+      log.info("executeTest response");
+      log.debug(response.toString());
+    });
   }
 
   public void start() throws IOException, InterruptedException {
@@ -68,6 +107,7 @@ public class Coordinator {
     }
   }
 
+  // 以下，各Serviceから呼び出されるメソッド
   public void registerProject(final GrpcRegisterProjectRequest request,
       final StreamObserver<GrpcRegisterProjectResponse> responseObserver) {
     log.info("registerProject request");
@@ -89,29 +129,7 @@ public class Coordinator {
 
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
-    log.info("executeTest request");
-    log.debug(request.toString());
-
-    final Worker worker = loadBalancer.getWorker();
-    final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-
-    responseSingle.subscribe(response -> {
-      loadBalancer.finish(worker);
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      log.info("executeTest response");
-      log.debug(response.toString());
-
-    }, error -> {
-      loadBalancer.finish(worker);
-      final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-          .setStatus(STATUS_FAILED)
-          .build();
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      log.info("executeTest response");
-      log.debug(response.toString());
-    });
+    subject.onNext(new ImmutablePair<>(request, responseObserver));
   }
 
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
@@ -184,6 +202,8 @@ public class Coordinator {
     log.debug(response.toString());
   }
 
+
+  // 以下はテスト用メソッド
   protected List<ServerServiceDefinition> getServices() {
     return services;
   }

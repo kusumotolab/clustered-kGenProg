@@ -2,7 +2,9 @@ package jp.kusumotolab.kgenprog.coordinator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Test;
+import io.reactivex.disposables.Disposable;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class LoadBalancerTest {
@@ -33,19 +35,22 @@ public class LoadBalancerTest {
     loadBalancer.addWorker(worker2);
     loadBalancer.addWorker(worker3);
 
-    final Worker worker4 = loadBalancer.getWorker();
-    final Worker worker5 = loadBalancer.getWorker();
-    final Worker worker6 = loadBalancer.getWorker();
+    final AtomicReference<Worker> worker = new AtomicReference<>();
+    final Disposable subscribe = loadBalancer.getHotWorkerObserver()
+        .subscribe(worker::set);
 
-    // 全て異なるはず
-    assertThat(worker4).isNotEqualTo(worker5).isNotEqualTo(worker6);
-    assertThat(worker5).isNotEqualTo(worker6);
+    loadBalancer.finish(worker1);
+    assertThat(worker.get()).isEqualTo(worker1);
 
-    // worker4だけ先に終わるとする
-    loadBalancer.finish(worker4);
+    loadBalancer.finish(worker2);
+    assertThat(worker.get()).isEqualTo(worker2);
 
-    // worker4の負荷が減ったはずなので、次に取得するworkerは4のはず
-    final Worker worker7 = loadBalancer.getWorker();
-    assertThat(worker7).isEqualTo(worker4);
+    loadBalancer.finish(worker1);
+    assertThat(worker.get()).isEqualTo(worker1);
+
+    loadBalancer.finish(worker3);
+    assertThat(worker.get()).isEqualTo(worker3);
+
+    subscribe.dispose();
   }
 }

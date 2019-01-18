@@ -1,43 +1,31 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
+import io.reactivex.Observable;
+import io.reactivex.subjects.BehaviorSubject;
+import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class LoadBalancer {
 
-  final List<Worker> allWorkerList = new ArrayList<>();
-  final Map<Worker, Integer> taskMap = new ConcurrentHashMap<>();
+  private final List<Worker> allWorkerList = new ArrayList<>();
+  private final Subject<Worker> workerSubject = BehaviorSubject.create();
 
   public void addWorker(final Worker worker) {
     allWorkerList.add(worker);
-    taskMap.put(worker, 0);
+    workerSubject.onNext(worker);
   }
 
-  public Worker getWorker() {
-    if (taskMap.isEmpty()) {
-      throw new RuntimeException("LoadBalancer has no worker.");
-    }
-
-    final Entry<Worker, Integer> minEntry = taskMap.entrySet()
-        .stream()
-        .min(Comparator.comparingInt(Entry::getValue))
-        .get();
-
-    final Worker worker = minEntry.getKey();
-    taskMap.compute(worker, (k, v) -> v + 1);
-    return worker;
-  }
-
-  public void finish(final Worker worker) {
-    taskMap.compute(worker, (k, v) -> v - 1);
+  public synchronized void finish(final Worker worker) {
+    workerSubject.onNext(worker);
   }
 
   public List<Worker> getWorkerList() {
     return allWorkerList;
+  }
+
+  public Observable<Worker> getHotWorkerObserver() {
+    return workerSubject;
   }
 }
