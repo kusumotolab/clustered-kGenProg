@@ -6,8 +6,8 @@ import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 
 public class ExecuteTestRequest {
 
-  final GrpcExecuteTestRequest request;
-  final StreamObserver<GrpcExecuteTestResponse> streamObserver;
+  private final GrpcExecuteTestRequest request;
+  private final StreamObserver<GrpcExecuteTestResponse> streamObserver;
 
   public ExecuteTestRequest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> streamObserver) {

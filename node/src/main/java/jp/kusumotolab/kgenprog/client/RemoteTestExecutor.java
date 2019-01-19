@@ -16,7 +16,6 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.reactivex.Single;
 import jp.kusumotolab.kgenprog.Configuration;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
@@ -24,6 +23,7 @@ import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
@@ -91,7 +91,7 @@ public class RemoteTestExecutor implements TestExecutor {
     log.debug("executeTest response");
     log.debug(response.toString());
 
-    if (response.getStatus() == Coordinator.STATUS_FAILED) {
+    if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to executeTest");
       return EmptyTestResults.instance;
     }
@@ -128,7 +128,7 @@ public class RemoteTestExecutor implements TestExecutor {
     log.debug("registerProject response");
     log.debug(response.toString());
 
-    if (response.getStatus() == Coordinator.STATUS_FAILED) {
+    if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to register project");
       throw new RuntimeException("failed to register project");
     }
@@ -151,7 +151,7 @@ public class RemoteTestExecutor implements TestExecutor {
     log.debug("unregisterProject response");
     log.debug(response.toString());
 
-    if (response.getStatus() == Coordinator.STATUS_FAILED) {
+    if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to unregister project");
     }
     projectId = Optional.empty();

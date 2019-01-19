@@ -5,11 +5,11 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import io.reactivex.Single;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.ga.variant.Gene;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
@@ -45,7 +45,7 @@ public class LocalWorker implements Worker {
     final Single<Gene> geneSingle = Single.just(gene);
     final Single<TestResults> resultsSingle = geneSingle.map(project::executeTest);
     responseSingle = resultsSingle.map(results -> GrpcExecuteTestResponse.newBuilder()
-        .setStatus(Coordinator.STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .setTestResults(Serializer.serialize(results))
         .build());
 
@@ -72,13 +72,13 @@ public class LocalWorker implements Worker {
       if (project == null) {
         // プロジェクトが見つからなかった場合、実行失敗メッセージを返す
         response = GrpcUnregisterProjectResponse.newBuilder()
-            .setStatus(Coordinator.STATUS_FAILED)
+            .setStatus(GrpcStatus.FAILED)
             .build();
 
       } else {
         project.unregister();
         response = GrpcUnregisterProjectResponse.newBuilder()
-            .setStatus(Coordinator.STATUS_SUCCESS)
+            .setStatus(GrpcStatus.SUCCESS)
             .build();
       }
 

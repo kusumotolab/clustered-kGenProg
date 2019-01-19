@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,11 +14,6 @@ import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
-import io.reactivex.Observable;
-import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
-import io.reactivex.subjects.BehaviorSubject;
-import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
@@ -31,32 +24,25 @@ import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class Coordinator {
 
-  public static final int STATUS_SUCCESS = 0;
-  public static final int STATUS_FAILED = -1;
   private static final Logger log = LoggerFactory.getLogger(Coordinator.class);
 
   private final Server server;
   private final AtomicInteger idCounter;
-  private final LoadBalancer loadBalancer = new LoadBalancer();
+  private final WorkerSet workerSet = new WorkerSet();
   private final List<ServerServiceDefinition> services = new ArrayList<>();
   private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap =
       new ConcurrentHashMap<>();
   private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
 
-  private final Subject<ExecuteTestRequest> testRequestSubject;
-  private final ExecutorService executorService;
-
   public Coordinator(final ClusterConfiguration config) {
-    final BehaviorSubject<ExecuteTestRequest> behaviorSubject = BehaviorSubject.create();
-    testRequestSubject = behaviorSubject.toSerialized();
-
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
         .addService(
@@ -66,43 +52,7 @@ public class Coordinator {
 
     services.addAll(server.getServices());
 
-    executorService = Executors.newCachedThreadPool();
-
     idCounter = new AtomicInteger(0);
-
-    final Object nullObject = new Object();
-    Observable.zip(this.testRequestSubject, loadBalancer.getHotWorkerObserver(),
-        ((testRequest, worker) -> {
-          this.executeTest(testRequest.getRequest(), testRequest.getStreamObserver(), worker);
-          return nullObject;
-        }))
-        .subscribe(e -> {
-        }, e -> log.error(e.toString()));
-  }
-
-  private void executeTest(final GrpcExecuteTestRequest request,
-      final StreamObserver<GrpcExecuteTestResponse> responseObserver, final Worker worker) {
-    log.info("executeTest request");
-    log.debug(request.toString());
-
-    final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-    responseSingle.subscribeOn(Schedulers.from(executorService))
-        .subscribe(response -> {
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
-          loadBalancer.finish(worker);
-        }, error -> {
-          final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-              .setStatus(STATUS_FAILED)
-              .build();
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
-          loadBalancer.finish(worker);
-        });
   }
 
   public void start() throws IOException, InterruptedException {
@@ -128,7 +78,7 @@ public class Coordinator {
 
     final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
         .setProjectId(projectId)
-        .setStatus(STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .build();
     responseObserver.onNext(response);
     responseObserver.onCompleted();
@@ -138,7 +88,7 @@ public class Coordinator {
 
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
-    testRequestSubject.onNext(new ExecuteTestRequest(request, responseObserver));
+    workerSet.executeTest(new ExecuteTestRequest(request, responseObserver));
   }
 
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
@@ -146,17 +96,13 @@ public class Coordinator {
     log.info("unregisterProject request");
     log.debug(request.toString());
 
-    for (final Worker worker : loadBalancer.getWorkerCollection()) {
-      worker.unregisterProject(request)
-          .subscribe(r -> {
-          }, e -> log.error(e.toString()));
-    }
+    workerSet.unregister(request);
 
     binaryMap.remove(request.getProjectId());
     configurationMap.remove(request.getProjectId());
 
     final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
-        .setStatus(STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .build();
     responseObserver.onNext(response);
     responseObserver.onCompleted();
@@ -175,7 +121,7 @@ public class Coordinator {
     addWorkerToLoadBalancer(remoteWorker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
-        .setStatus(STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .build();
     responseObserver.onNext(response);
     responseObserver.onCompleted();
@@ -196,13 +142,13 @@ public class Coordinator {
     final GrpcGetProjectResponse response;
     if (byteString == null || configuration == null) {
       response = GrpcGetProjectResponse.newBuilder()
-          .setStatus(STATUS_FAILED)
+          .setStatus(GrpcStatus.FAILED)
           .build();
     } else {
       response = GrpcGetProjectResponse.newBuilder()
           .setConfiguration(configuration)
           .setProject(byteString)
-          .setStatus(STATUS_SUCCESS)
+          .setStatus(GrpcStatus.SUCCESS)
           .build();
     }
     responseObserver.onNext(response);
@@ -222,6 +168,6 @@ public class Coordinator {
   }
 
   protected void addWorkerToLoadBalancer(final Worker worker) {
-    loadBalancer.addWorker(worker);
+    workerSet.addWorker(worker);
   }
 }
