@@ -51,11 +51,11 @@ public class Coordinator {
       new ConcurrentHashMap<>();
   private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
 
-  private final Subject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> subject;
+  private final Subject<ExecuteTestRequest> testRequestSubject;
 
   public Coordinator(final ClusterConfiguration config) {
-    final BehaviorSubject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> behaviorSubject = BehaviorSubject.create();
-    subject = behaviorSubject.toSerialized();
+    final BehaviorSubject<ExecuteTestRequest> behaviorSubject = BehaviorSubject.create();
+    testRequestSubject = behaviorSubject.toSerialized();
 
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
@@ -69,13 +69,13 @@ public class Coordinator {
     idCounter = new AtomicInteger(0);
 
     final Object nullObject = new Object();
-    Observable.zip(this.subject, loadBalancer.getHotWorkerObserver(), ((pair, worker) -> {
-      this.executeTest(pair.getLeft(), pair.getValue(), worker);
-      return nullObject;
-    }))
+    Observable.zip(this.testRequestSubject, loadBalancer.getHotWorkerObserver(),
+        ((testRequest, worker) -> {
+          this.executeTest(testRequest.getRequest(), testRequest.getStreamObserver(), worker);
+          return nullObject;
+        }))
         .subscribe(e -> {
         }, e -> log.error(e.toString()));
-
   }
 
   private void executeTest(final GrpcExecuteTestRequest request,
@@ -136,7 +136,7 @@ public class Coordinator {
 
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
-    subject.onNext(new ImmutablePair<>(request, responseObserver));
+    testRequestSubject.onNext(new ExecuteTestRequest(request, responseObserver));
   }
 
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
