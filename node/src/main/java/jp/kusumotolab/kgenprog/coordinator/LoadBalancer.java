@@ -22,7 +22,7 @@ public class LoadBalancer {
     workerSubject.onNext(worker);
   }
 
-  public synchronized void finish(final Worker worker) {
+  public void finish(final Worker worker) {
     workerSubject.onNext(worker);
   }
 

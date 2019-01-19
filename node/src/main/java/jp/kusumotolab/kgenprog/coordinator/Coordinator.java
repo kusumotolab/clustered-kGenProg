@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
@@ -83,23 +84,23 @@ public class Coordinator {
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-    responseSingle.subscribeOn(Schedulers.computation()).subscribe(response -> {
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      loadBalancer.finish(worker);
-      log.info("executeTest response");
-      log.debug(response.toString());
-
-    }, error -> {
-      final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-          .setStatus(STATUS_FAILED)
-          .build();
-      responseObserver.onNext(response);
-      responseObserver.onCompleted();
-      loadBalancer.finish(worker);
-      log.info("executeTest response");
-      log.debug(response.toString());
-    });
+    responseSingle.subscribeOn(Schedulers.from(Executors.newCachedThreadPool()))
+        .subscribe(response -> {
+          responseObserver.onNext(response);
+          responseObserver.onCompleted();
+          log.info("executeTest response");
+          log.debug(response.toString());
+          loadBalancer.finish(worker);
+        }, error -> {
+          final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
+              .setStatus(STATUS_FAILED)
+              .build();
+          responseObserver.onNext(response);
+          responseObserver.onCompleted();
+          log.info("executeTest response");
+          log.debug(response.toString());
+          loadBalancer.finish(worker);
+        });
   }
 
   public void start() throws IOException, InterruptedException {
