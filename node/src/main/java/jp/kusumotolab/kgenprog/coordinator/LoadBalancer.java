@@ -1,7 +1,8 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import io.reactivex.Observable;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
@@ -9,7 +10,7 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class LoadBalancer {
 
-  private final List<Worker> allWorkerList = new ArrayList<>();
+  private final ConcurrentMap<Worker, Worker> workerMap = new ConcurrentHashMap<>();
   private final Subject<Worker> workerSubject;
 
   public LoadBalancer() {
@@ -18,7 +19,7 @@ public class LoadBalancer {
   }
 
   public void addWorker(final Worker worker) {
-    allWorkerList.add(worker);
+    workerMap.putIfAbsent(worker, worker);
     workerSubject.onNext(worker);
   }
 
@@ -26,8 +27,8 @@ public class LoadBalancer {
     workerSubject.onNext(worker);
   }
 
-  public List<Worker> getWorkerList() {
-    return allWorkerList;
+  public Collection<Worker> getWorkerCollection() {
+    return workerMap.values();
   }
 
   public Observable<Worker> getHotWorkerObserver() {

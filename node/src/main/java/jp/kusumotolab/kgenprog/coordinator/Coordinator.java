@@ -7,9 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -149,11 +146,7 @@ public class Coordinator {
     log.info("unregisterProject request");
     log.debug(request.toString());
 
-    for (final Worker worker : loadBalancer.getWorkerList()) {
-      if (worker == null) {
-        // FIXME: 2019/01/18 なぜかnullになる
-        continue;
-      }
+    for (final Worker worker : loadBalancer.getWorkerCollection()) {
       worker.unregisterProject(request)
           .subscribe(r -> {
           }, e -> log.error(e.toString()));
