@@ -5,7 +5,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +54,7 @@ public class Coordinator {
   private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
 
   private final Subject<ExecuteTestRequest> testRequestSubject;
+  private final ExecutorService executorService;
 
   public Coordinator(final ClusterConfiguration config) {
     final BehaviorSubject<ExecuteTestRequest> behaviorSubject = BehaviorSubject.create();
@@ -63,6 +68,8 @@ public class Coordinator {
         .build();
 
     services.addAll(server.getServices());
+
+    executorService = Executors.newCachedThreadPool();
 
     idCounter = new AtomicInteger(0);
 
@@ -82,7 +89,7 @@ public class Coordinator {
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-    responseSingle.subscribeOn(Schedulers.from(Executors.newCachedThreadPool()))
+    responseSingle.subscribeOn(Schedulers.from(executorService))
         .subscribe(response -> {
           responseObserver.onNext(response);
           responseObserver.onCompleted();
