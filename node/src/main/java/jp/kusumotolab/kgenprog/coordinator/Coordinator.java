@@ -18,6 +18,7 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Observable;
 import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
@@ -49,9 +50,12 @@ public class Coordinator {
       new ConcurrentHashMap<>();
   private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
 
-  private final Subject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> subject = BehaviorSubject.create();
+  private final Subject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> subject;
 
   public Coordinator(final ClusterConfiguration config) {
+    final BehaviorSubject<Pair<GrpcExecuteTestRequest, StreamObserver<GrpcExecuteTestResponse>>> behaviorSubject = BehaviorSubject.create();
+    subject = behaviorSubject.toSerialized();
+
     server = ServerBuilder.forPort(config.getPort())
         .addService(new KGenProgCluster(this))
         .addService(
@@ -64,10 +68,13 @@ public class Coordinator {
     idCounter = new AtomicInteger(0);
 
     final Object nullObject = new Object();
-    Observable.zip(subject, loadBalancer.getHotWorkerObserver(), ((pair, worker) -> {
+    Observable.zip(this.subject, loadBalancer.getHotWorkerObserver(), ((pair, worker) -> {
       this.executeTest(pair.getLeft(), pair.getValue(), worker);
       return nullObject;
-    })).subscribe();
+    }))
+        .subscribe(e -> {
+        }, e -> log.error(e.toString()));
+
   }
 
   private void executeTest(final GrpcExecuteTestRequest request,
@@ -76,8 +83,7 @@ public class Coordinator {
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
-
-    responseSingle.subscribe(response -> {
+    responseSingle.subscribeOn(Schedulers.computation()).subscribe(response -> {
       responseObserver.onNext(response);
       responseObserver.onCompleted();
       loadBalancer.finish(worker);
@@ -138,6 +144,10 @@ public class Coordinator {
     log.debug(request.toString());
 
     for (final Worker worker : loadBalancer.getWorkerList()) {
+      if (worker == null) {
+        // FIXME: 2019/01/18 なぜかnullになる
+        continue;
+      }
       worker.unregisterProject(request)
           .subscribe(r -> {
           }, e -> log.error(e.toString()));

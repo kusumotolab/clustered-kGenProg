@@ -10,7 +10,12 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
 public class LoadBalancer {
 
   private final List<Worker> allWorkerList = new ArrayList<>();
-  private final Subject<Worker> workerSubject = BehaviorSubject.create();
+  private final Subject<Worker> workerSubject;
+
+  public LoadBalancer() {
+    final BehaviorSubject<Worker> behaviorSubject = BehaviorSubject.create();
+    workerSubject = behaviorSubject.toSerialized();
+  }
 
   public void addWorker(final Worker worker) {
     allWorkerList.add(worker);
