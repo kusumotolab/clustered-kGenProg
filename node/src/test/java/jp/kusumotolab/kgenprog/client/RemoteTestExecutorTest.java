@@ -38,6 +38,7 @@ import jp.kusumotolab.kgenprog.ga.variant.Variant;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
 import jp.kusumotolab.kgenprog.grpc.Serializer;
@@ -151,7 +152,7 @@ public class RemoteTestExecutorTest {
       final Gene gene = Serializer.deserialize(targetProject.rootPath, request.getGene());
       final TestResults results = project.executeTest(gene);
       final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
+          .setStatus(GrpcStatus.SUCCESS)
           .setTestResults(Serializer.serialize(results))
           .build();
 
@@ -166,7 +167,7 @@ public class RemoteTestExecutorTest {
       final StreamObserver<GrpcRegisterProjectResponse> responseObserver =
           invocation.getArgument(1);
       final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
+          .setStatus(GrpcStatus.SUCCESS)
           .setProjectId(PROJECT_ID)
           .build();
       responseObserver.onNext(response);
@@ -180,7 +181,7 @@ public class RemoteTestExecutorTest {
       final StreamObserver<GrpcUnregisterProjectResponse> responseObserver =
           invocation.getArgument(1);
       final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
-          .setStatus(Coordinator.STATUS_SUCCESS)
+          .setStatus(GrpcStatus.SUCCESS)
           .build();
       responseObserver.onNext(response);
       responseObserver.onCompleted();

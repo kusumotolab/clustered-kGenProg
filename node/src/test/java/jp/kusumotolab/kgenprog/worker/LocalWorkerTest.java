@@ -22,9 +22,9 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import io.grpc.testing.GrpcCleanupRule;
 import jp.kusumotolab.kgenprog.Configuration;
-import jp.kusumotolab.kgenprog.coordinator.Coordinator;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.Project;
@@ -121,12 +121,12 @@ public class LocalWorkerTest {
     // 1度目は削除に成功する
     final GrpcUnregisterProjectResponse response1 = worker.unregisterProject(request)
         .blockingGet();
-    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+    assertThat(response1.getStatus()).isEqualTo(GrpcStatus.SUCCESS);
 
     // 2度目は失敗する
     final GrpcUnregisterProjectResponse response2 = worker.unregisterProject(request)
         .blockingGet();
-    assertThat(response2.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
+    assertThat(response2.getStatus()).isEqualTo(GrpcStatus.FAILED);
 
     // unregisterが呼ばれているはず
     verify(project, times(1)).unregister();

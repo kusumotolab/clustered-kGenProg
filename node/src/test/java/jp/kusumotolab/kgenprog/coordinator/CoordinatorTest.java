@@ -26,6 +26,7 @@ import jp.kusumotolab.kgenprog.grpc.GrpcGetProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcRegisterWorkerResponse;
+import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectResponse;
 import jp.kusumotolab.kgenprog.grpc.KGenProgClusterGrpc;
@@ -68,13 +69,13 @@ public class CoordinatorTest {
   public void testExecuteTest() {
     // レスポンスのモック作成
     final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-        .setStatus(Coordinator.STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .build();
     final Single<GrpcExecuteTestResponse> responseSingle = Single.just(response);
 
     final Worker worker = mock(Worker.class);
     when(worker.executeTest(any())).thenReturn(responseSingle);
-    coordinator.addWorkerToLoadBalancer(worker);
+    coordinator.addWorker(worker);
 
     // executeTest実行
     final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
@@ -98,7 +99,7 @@ public class CoordinatorTest {
     final Worker worker = mock(Worker.class);
     final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
     when(worker.executeTest(any())).thenReturn(responseSingle);
-    coordinator.addWorkerToLoadBalancer(worker);
+    coordinator.addWorker(worker);
 
     // executeTest実行
     final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
@@ -107,7 +108,7 @@ public class CoordinatorTest {
     final GrpcExecuteTestResponse executeTestResponse = stub.executeTest(executeTestRequest);
 
     // レスポンス確認
-    assertThat(executeTestResponse.getStatus()).isEqualTo(Coordinator.STATUS_FAILED);
+    assertThat(executeTestResponse.getStatus()).isEqualTo(GrpcStatus.FAILED);
   }
 
   @Test
@@ -115,7 +116,7 @@ public class CoordinatorTest {
     // レスポンスのモック作成
     final Worker worker = mock(Worker.class);
     final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
-        .setStatus(Coordinator.STATUS_SUCCESS)
+        .setStatus(GrpcStatus.SUCCESS)
         .build();
     final Single<GrpcUnregisterProjectResponse> responseSingle = Single.just(response);
 
@@ -137,7 +138,7 @@ public class CoordinatorTest {
   public void testRegisterWorker() {
     final CoordinatorClient coordinatorClient = new CoordinatorClient(channel);
     final GrpcRegisterWorkerResponse response = coordinatorClient.registerWorker(100);
-    assertThat(response.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+    assertThat(response.getStatus()).isEqualTo(GrpcStatus.SUCCESS);
   }
 
   @Test
@@ -149,8 +150,8 @@ public class CoordinatorTest {
     final GrpcGetProjectResponse response1 = coordinatorClient.getProject(projectId1);
     final GrpcGetProjectResponse response2 = coordinatorClient.getProject(projectId2);
 
-    assertThat(response1.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
-    assertThat(response2.getStatus()).isEqualTo(Coordinator.STATUS_SUCCESS);
+    assertThat(response1.getStatus()).isEqualTo(GrpcStatus.SUCCESS);
+    assertThat(response2.getStatus()).isEqualTo(GrpcStatus.SUCCESS);
 
     assertThat(response1.getProject()
         .toStringUtf8()).isEqualTo("kGenProg");
