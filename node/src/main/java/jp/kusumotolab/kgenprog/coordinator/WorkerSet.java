@@ -14,14 +14,13 @@ import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class WorkerSet {
 
   private static final Logger log
-       = LoggerFactory.getLogger(WorkerSet.class);
+      = LoggerFactory.getLogger(WorkerSet.class);
 
   private final ConcurrentMap<Worker, Worker> workerMap = new ConcurrentHashMap<>();
   private final Subject<Worker> workerSubject;
@@ -29,7 +28,7 @@ public class WorkerSet {
   private final ExecutorService executorService = Executors.newCachedThreadPool();
 
   public WorkerSet() {
-    final BehaviorSubject<Worker> workerBehaviorSubject= BehaviorSubject.create();
+    final BehaviorSubject<Worker> workerBehaviorSubject = BehaviorSubject.create();
     this.workerSubject = workerBehaviorSubject.toSerialized();
 
     final BehaviorSubject<ExecuteTestRequest> testRequestBehaviorSubject = BehaviorSubject.create();
@@ -40,7 +39,9 @@ public class WorkerSet {
     Observable.zip(testRequestSubject, workerSubject, (request, worker) -> {
       executeTest(request, worker);
       return nullObject;
-    }).subscribe(o -> {}, error -> log.error(error.toString()));
+    })
+        .subscribe(o -> {
+        }, error -> log.error(error.toString()));
   }
 
   public void addWorker(final Worker worker) {
@@ -54,22 +55,27 @@ public class WorkerSet {
 
   protected void executeTest(final ExecuteTestRequest testRequest, final Worker worker) {
     final GrpcExecuteTestRequest request = testRequest.getRequest();
-    final StreamObserver<GrpcExecuteTestResponse> responseObserver= testRequest.getStreamObserver();
+    final StreamObserver<GrpcExecuteTestResponse> responseObserver = testRequest.getStreamObserver();
     log.info("executeTest request");
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
         .subscribe(response -> {
+          workerSubject.onNext(worker);
+          // MEMO
+          // clientとの通信が途絶えるとonNextで落ちる
+          // エラーが出るが問題はない(と思われる)
+          // ただし溜まっている全てのrequestをテスト&ビルドしてからその全てがここで落ちるので非効率
           responseObserver.onNext(response);
           responseObserver.onCompleted();
           log.info("executeTest response");
           log.debug(response.toString());
-          workerSubject.onNext(worker);
         }, error -> {
-          log.info("failed executeTest response");
-          testRequestSubject.onNext(testRequest);
-          remove(worker);
+          // workerとの通信が途絶えるとここに入る
+          log.info("failed executeTest");
+          testRequestSubject.onNext(testRequest); // 再度testSubjectに流して他のworkerで実行する
+          remove(worker); // 失敗したworkerをworkerSetから取り除く
         });
   }
 
