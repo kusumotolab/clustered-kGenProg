@@ -74,7 +74,7 @@ public class WorkerSet {
         }, error -> {
           // workerとの通信が途絶えるとここに入る
           log.info("failed executeTest");
-          testRequestSubject.onNext(testRequest); // 再度testSubjectに流して他のworkerで実行する
+          testRequestSubject.onNext(testRequest); // 再度testRequestSubjectに流して他のworkerで実行する
           remove(worker); // 失敗したworkerをworkerSetから取り除く
         });
   }
