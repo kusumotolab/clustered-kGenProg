@@ -2,12 +2,9 @@ package jp.kusumotolab.kgenprog.coordinator;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.junit.Test;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Single;
@@ -39,15 +36,14 @@ public class WorkerSetTest {
     when(worker3.executeTest(any())).then(
         invocation -> Single.create(emitter -> responseSubject3.subscribe(emitter::onSuccess)));
 
-    final WorkerSet workerSet = spy(new WorkerSet());
-    final ExecutorService service = Executors.newSingleThreadExecutor();
-    when(workerSet.getExecutorService()).thenReturn(service);
+    final WorkerSet workerSet = new WorkerSet();
     workerSet.addWorker(worker1);
     workerSet.addWorker(worker2);
     workerSet.addWorker(worker3);
 
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
         .build();
+    @SuppressWarnings("unchecked")
     final StreamObserver<GrpcExecuteTestResponse> mockObserver = mock(StreamObserver.class);
     final ExecuteTestRequest testRequest = new ExecuteTestRequest(request, mockObserver);
     final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
@@ -124,7 +120,7 @@ public class WorkerSetTest {
     when(worker2.unregisterProject(any())).thenReturn(Single.just(response));
     when(worker3.unregisterProject(any())).thenReturn(Single.just(response));
 
-    final WorkerSet workerSet = spy(new WorkerSet());
+    final WorkerSet workerSet = new WorkerSet();
     workerSet.addWorker(worker1);
     workerSet.addWorker(worker2);
     workerSet.addWorker(worker3);

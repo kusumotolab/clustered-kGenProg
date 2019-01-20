@@ -75,7 +75,7 @@ public class CoordinatorTest {
 
     final Worker worker = mock(Worker.class);
     when(worker.executeTest(any())).thenReturn(responseSingle);
-    coordinator.addWorkerToLoadBalancer(worker);
+    coordinator.addWorker(worker);
 
     // executeTest実行
     final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
@@ -99,7 +99,7 @@ public class CoordinatorTest {
     final Worker worker = mock(Worker.class);
     final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
     when(worker.executeTest(any())).thenReturn(responseSingle);
-    coordinator.addWorkerToLoadBalancer(worker);
+    coordinator.addWorker(worker);
 
     // executeTest実行
     final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);

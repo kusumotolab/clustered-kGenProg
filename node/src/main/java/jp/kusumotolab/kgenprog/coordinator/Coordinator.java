@@ -118,7 +118,7 @@ public class Coordinator {
     log.info("Client host name: " + hostName);
 
     final Worker remoteWorker = createWorker(hostName, request.getPort());
-    addWorkerToLoadBalancer(remoteWorker);
+    addWorker(remoteWorker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
         .setStatus(GrpcStatus.SUCCESS)
@@ -167,7 +167,7 @@ public class Coordinator {
     return new RemoteWorker(name, port);
   }
 
-  protected void addWorkerToLoadBalancer(final Worker worker) {
+  protected void addWorker(final Worker worker) {
     workerSet.addWorker(worker);
   }
 }
