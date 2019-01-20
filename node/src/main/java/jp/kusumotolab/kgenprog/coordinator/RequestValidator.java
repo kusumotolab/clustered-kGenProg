@@ -28,7 +28,7 @@ public class RequestValidator {
 
     // 失敗した後に来たリクエストは許可する
     if (request.getDate()
-        .after(information.date)) {
+        .compareTo(information.date) > 0) {
       return true;
     }
     return false;

@@ -96,11 +96,16 @@ public class CoordinatorTest {
   @Test
   public void testExecuteTestError() {
     // Errorを起こしたSingleを生成
+    final Single<GrpcExecuteTestResponse> errorSingle = Single.error(new Exception());
+
     final Worker disconnectedWorker = mock(Worker.class);
     final Worker connectedWorker = mock(Worker.class);
-    final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
-    when(disconnectedWorker.executeTest(any())).thenReturn(responseSingle);
-    when(connectedWorker.executeTest(any())).thenReturn(Single.just(GrpcExecuteTestResponse.newBuilder().build()));
+
+    when(disconnectedWorker.executeTest(any())).thenReturn(errorSingle);
+    when(connectedWorker.executeTest(any())).thenReturn(Single.just(
+        GrpcExecuteTestResponse.newBuilder()
+            .build()));
+
     coordinator.addWorker(disconnectedWorker);
     coordinator.addWorker(connectedWorker);
 
