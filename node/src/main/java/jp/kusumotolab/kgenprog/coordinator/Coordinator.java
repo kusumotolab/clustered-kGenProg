@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
@@ -43,9 +44,8 @@ public class Coordinator {
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
-        .intercept(clientHostAddressCaptor)
-        .addService(new KGenProgCluster(this))
-        .addService(new CoordinatorService(this))
+        .addService(ServerInterceptors.intercept(new KGenProgCluster(this), clientHostAddressCaptor))
+        .addService(ServerInterceptors.intercept(new CoordinatorService(this), clientHostAddressCaptor))
         .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
 

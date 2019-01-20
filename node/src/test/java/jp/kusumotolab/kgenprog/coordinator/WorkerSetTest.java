@@ -43,9 +43,10 @@ public class WorkerSetTest {
 
     final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
         .build();
-    @SuppressWarnings("unchecked")
-    final StreamObserver<GrpcExecuteTestResponse> mockObserver = mock(StreamObserver.class);
-    final ExecuteTestRequest testRequest = new ExecuteTestRequest(request, mockObserver);
+    @SuppressWarnings("unchecked") final StreamObserver<GrpcExecuteTestResponse> mockObserver = mock(
+        StreamObserver.class);
+    final ExecuteTestRequest testRequest = new ExecuteTestRequest(request, mockObserver,
+        "localhost", 8080);
     final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
         .build();
 

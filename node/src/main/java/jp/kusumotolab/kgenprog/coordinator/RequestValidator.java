@@ -10,21 +10,25 @@ public class RequestValidator {
 
   public void addInvalidateRequest(final ExecuteTestRequest request) {
     final InvalidateInformation information = new InvalidateInformation(request.getSenderPort(),
-        request.getDate());
+        new Date());
     invalidateInformationMap.put(request.getSenderName(), information);
   }
 
   public boolean validate(final ExecuteTestRequest request) {
     final InvalidateInformation information = invalidateInformationMap.get(
         request.getSenderName());
+
     if (information == null) {
       return true;
     }
+
     if (information.port != request.getSenderPort()) {
       return true;
     }
+
+    // 失敗した後に来たリクエストは許可する
     if (request.getDate()
-        .before(information.date)) {
+        .after(information.date)) {
       return true;
     }
     return false;
