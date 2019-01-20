@@ -74,8 +74,14 @@ public class WorkerSet {
           responseObserver.onCompleted();
           log.info("executeTest response");
           log.debug(response.toString());
-          workerSubject.onNext(worker);
+          testRequestSubject.onNext(testRequest);
+          remove(worker);
         });
+  }
+
+  private void remove(final Worker worker) {
+    worker.finish();
+    workerMap.remove(worker);
   }
 
   public void unregister(final GrpcUnregisterProjectRequest request) {

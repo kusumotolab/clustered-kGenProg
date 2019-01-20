@@ -25,4 +25,9 @@ public interface Worker {
    * @return レスポンス
    */
   Single<GrpcUnregisterProjectResponse> unregisterProject(GrpcUnregisterProjectRequest request);
+
+  /**
+   * そのワーカーが終了したことを通知するメソッド
+   */
+  default void finish() { }
 }

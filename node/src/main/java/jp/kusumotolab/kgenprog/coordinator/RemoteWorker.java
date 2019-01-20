@@ -15,10 +15,11 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class RemoteWorker implements Worker {
 
-  final KGenProgClusterBlockingStub blockingStub;
+  private final KGenProgClusterBlockingStub blockingStub;
+  private final ManagedChannel managedChannel;
 
   public RemoteWorker(final String name, final int port) {
-    final ManagedChannel managedChannel = ManagedChannelBuilder.forAddress(name, port)
+    managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
         .keepAliveTime(ClusterConfiguration.DEFAULT_KEEPALIVE_SECONDS, TimeUnit.SECONDS)
         .maxInboundMessageSize(Integer.MAX_VALUE)
@@ -41,5 +42,10 @@ public class RemoteWorker implements Worker {
       final GrpcUnregisterProjectResponse response = blockingStub.unregisterProject(request);
       emitter.onSuccess(response);
     });
+  }
+
+  @Override
+  public void finish() {
+    managedChannel.shutdown();
   }
 }
