@@ -26,6 +26,7 @@ public class WorkerSet {
   private final Subject<Worker> workerSubject;
   private final Subject<ExecuteTestRequest> testRequestSubject;
   private final ExecutorService executorService = Executors.newCachedThreadPool();
+  private final RequestValidator requestValidator = new RequestValidator();
 
   public WorkerSet() {
     final BehaviorSubject<Worker> workerBehaviorSubject = BehaviorSubject.create();
@@ -56,6 +57,14 @@ public class WorkerSet {
   protected void executeTest(final ExecuteTestRequest testRequest, final Worker worker) {
     final GrpcExecuteTestRequest request = testRequest.getRequest();
     final StreamObserver<GrpcExecuteTestResponse> responseObserver = testRequest.getStreamObserver();
+
+    if (!requestValidator.validate(testRequest)) {
+      log.info("skip executeTestRequest");
+      log.debug(request.toString());
+      workerSubject.onNext(worker);
+      return;
+    }
+
     log.info("executeTest request");
     log.debug(request.toString());
 
@@ -63,19 +72,20 @@ public class WorkerSet {
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
         .subscribe(response -> {
           workerSubject.onNext(worker);
-          // MEMO
-          // clientとの通信が途絶えるとonNextで落ちる
-          // エラーが出るが問題はない(と思われる)
-          // ただし溜まっている全てのrequestをテスト&ビルドしてからその全てがここで落ちるので非効率
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
+          try {
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            log.info("executeTest response");
+            log.debug(response.toString());
+          } catch (final RuntimeException e) {
+            requestValidator.addInvalidateRequest(testRequest);
+            log.error(e.toString());
+          }
         }, error -> {
           // workerとの通信が途絶えるとここに入る
           log.info("failed executeTest");
-          testRequestSubject.onNext(testRequest); // 再度testRequestSubjectに流して他のworkerで実行する
-          remove(worker); // 失敗したworkerをworkerSetから取り除く
+          testRequestSubject.onNext(testRequest);
+          remove(worker);
         });
   }
 
