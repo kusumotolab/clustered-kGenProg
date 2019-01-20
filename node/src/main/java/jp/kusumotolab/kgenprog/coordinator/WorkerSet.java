@@ -84,6 +84,7 @@ public class WorkerSet {
         }, error -> {
           // workerとの通信が途絶えるとここに入る
           log.info("failed executeTest");
+          log.error(error.toString());
           testRequestSubject.onNext(testRequest);
           remove(worker);
         });
