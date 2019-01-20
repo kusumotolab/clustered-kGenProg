@@ -67,13 +67,7 @@ public class WorkerSet {
           log.debug(response.toString());
           workerSubject.onNext(worker);
         }, error -> {
-          final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-              .setStatus(GrpcStatus.FAILED)
-              .build();
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
+          log.info("failed executeTest response");
           testRequestSubject.onNext(testRequest);
           remove(worker);
         });
