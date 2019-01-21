@@ -14,22 +14,22 @@ import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
-import jp.kusumotolab.kgenprog.grpc.GrpcStatus;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class WorkerSet {
 
   private static final Logger log
-       = LoggerFactory.getLogger(WorkerSet.class);
+      = LoggerFactory.getLogger(WorkerSet.class);
 
   private final ConcurrentMap<Worker, Worker> workerMap = new ConcurrentHashMap<>();
   private final Subject<Worker> workerSubject;
   private final Subject<ExecuteTestRequest> testRequestSubject;
   private final ExecutorService executorService = Executors.newCachedThreadPool();
+  private final RequestValidator requestValidator = new RequestValidator();
 
   public WorkerSet() {
-    final BehaviorSubject<Worker> workerBehaviorSubject= BehaviorSubject.create();
+    final BehaviorSubject<Worker> workerBehaviorSubject = BehaviorSubject.create();
     this.workerSubject = workerBehaviorSubject.toSerialized();
 
     final BehaviorSubject<ExecuteTestRequest> testRequestBehaviorSubject = BehaviorSubject.create();
@@ -40,7 +40,9 @@ public class WorkerSet {
     Observable.zip(testRequestSubject, workerSubject, (request, worker) -> {
       executeTest(request, worker);
       return nullObject;
-    }).subscribe(o -> {}, error -> log.error(error.toString()));
+    })
+        .subscribe(o -> {
+        }, error -> log.error(error.toString()));
   }
 
   public void addWorker(final Worker worker) {
@@ -54,28 +56,43 @@ public class WorkerSet {
 
   protected void executeTest(final ExecuteTestRequest testRequest, final Worker worker) {
     final GrpcExecuteTestRequest request = testRequest.getRequest();
-    final StreamObserver<GrpcExecuteTestResponse> responseObserver= testRequest.getStreamObserver();
+    final StreamObserver<GrpcExecuteTestResponse> responseObserver = testRequest.getStreamObserver();
+
+    if (!requestValidator.validate(testRequest)) {
+      log.info("skip executeTestRequest");
+      log.debug(request.toString());
+      workerSubject.onNext(worker);
+      return;
+    }
+
     log.info("executeTest request");
     log.debug(request.toString());
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
         .subscribe(response -> {
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
           workerSubject.onNext(worker);
+          try {
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            log.info("executeTest response");
+            log.debug(response.toString());
+          } catch (final RuntimeException e) {
+            requestValidator.addInvalidateRequest(testRequest);
+            log.error(e.toString());
+          }
         }, error -> {
-          final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
-              .setStatus(GrpcStatus.FAILED)
-              .build();
-          responseObserver.onNext(response);
-          responseObserver.onCompleted();
-          log.info("executeTest response");
-          log.debug(response.toString());
-          workerSubject.onNext(worker);
+          // workerとの通信が途絶えるとここに入る
+          log.info("failed executeTest");
+          log.error(error.toString());
+          testRequestSubject.onNext(testRequest);
+          remove(worker);
         });
+  }
+
+  private void remove(final Worker worker) {
+    worker.finish();
+    workerMap.remove(worker);
   }
 
   public void unregister(final GrpcUnregisterProjectRequest request) {

@@ -96,19 +96,28 @@ public class CoordinatorTest {
   @Test
   public void testExecuteTestError() {
     // Errorを起こしたSingleを生成
-    final Worker worker = mock(Worker.class);
-    final Single<GrpcExecuteTestResponse> responseSingle = Single.error(new Exception());
-    when(worker.executeTest(any())).thenReturn(responseSingle);
-    coordinator.addWorker(worker);
+    final Single<GrpcExecuteTestResponse> errorSingle = Single.error(new Exception());
+
+    final Worker disconnectedWorker = mock(Worker.class);
+    final Worker connectedWorker = mock(Worker.class);
+
+    when(disconnectedWorker.executeTest(any())).thenReturn(errorSingle);
+    when(connectedWorker.executeTest(any())).thenReturn(Single.just(
+        GrpcExecuteTestResponse.newBuilder()
+            .build()));
+
+    coordinator.addWorker(disconnectedWorker);
+    coordinator.addWorker(connectedWorker);
 
     // executeTest実行
     final KGenProgClusterBlockingStub stub = KGenProgClusterGrpc.newBlockingStub(channel);
     final GrpcExecuteTestRequest executeTestRequest = GrpcExecuteTestRequest.newBuilder()
         .build();
-    final GrpcExecuteTestResponse executeTestResponse = stub.executeTest(executeTestRequest);
+    stub.executeTest(executeTestRequest);
 
-    // レスポンス確認
-    assertThat(executeTestResponse.getStatus()).isEqualTo(GrpcStatus.FAILED);
+    verify(disconnectedWorker, times(1)).executeTest(any());
+    verify(disconnectedWorker, times(1)).finish();
+    verify(connectedWorker, times(1)).executeTest(any());
   }
 
   @Test

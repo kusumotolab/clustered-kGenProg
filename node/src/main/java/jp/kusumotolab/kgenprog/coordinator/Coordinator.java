@@ -40,13 +40,12 @@ public class Coordinator {
   private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap =
       new ConcurrentHashMap<>();
-  private final ClientHostNameCaptor clientHostNameCaptor = new ClientHostNameCaptor();
+  private final ClientHostAddressCaptor clientHostAddressCaptor = new ClientHostAddressCaptor();
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
-        .addService(new KGenProgCluster(this))
-        .addService(
-            ServerInterceptors.intercept(new CoordinatorService(this), clientHostNameCaptor))
+        .addService(ServerInterceptors.intercept(new KGenProgCluster(this), clientHostAddressCaptor))
+        .addService(ServerInterceptors.intercept(new CoordinatorService(this), clientHostAddressCaptor))
         .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
 
@@ -88,7 +87,9 @@ public class Coordinator {
 
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
-    workerSet.executeTest(new ExecuteTestRequest(request, responseObserver));
+    final String hostName = clientHostAddressCaptor.getHostName();
+    final int port = clientHostAddressCaptor.getPort();
+    workerSet.executeTest(new ExecuteTestRequest(request, responseObserver, hostName, port));
   }
 
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
@@ -114,7 +115,7 @@ public class Coordinator {
       final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
     log.info("registerWorker request");
     log.debug(request.toString());
-    final String hostName = clientHostNameCaptor.getHostName();
+    final String hostName = clientHostAddressCaptor.getHostName();
     log.info("Client host name: " + hostName);
 
     final Worker remoteWorker = createWorker(hostName, request.getPort());
