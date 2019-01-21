@@ -1,47 +1,33 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RequestValidator {
 
-  private final Map<String, InvalidateInformation> invalidateInformationMap = new ConcurrentHashMap<>();
+  private final Map<String, Instant> invalidateTimeMap = new ConcurrentHashMap<>();
 
   public void addInvalidateRequest(final ExecuteTestRequest request) {
-    final InvalidateInformation information = new InvalidateInformation(request.getSenderPort(),
-        new Date());
-    invalidateInformationMap.put(request.getSenderName(), information);
+    final Instant time = Instant.now();
+    final String key = getKey(request.getSenderName(), request.getSenderPort());
+    invalidateTimeMap.put(key, time);
   }
 
   public boolean validate(final ExecuteTestRequest request) {
-    final InvalidateInformation information = invalidateInformationMap.get(
-        request.getSenderName());
+    final String key = getKey(request.getSenderName(), request.getSenderPort());
+    final Instant time = invalidateTimeMap.get(key);
 
-    if (information == null) {
-      return true;
-    }
-
-    if (information.port != request.getSenderPort()) {
+    if (time == null) {
       return true;
     }
 
     // 失敗した後に来たリクエストは許可する
-    if (request.getDate()
-        .compareTo(information.date) > 0) {
-      return true;
-    }
-    return false;
+    return request.getTime()
+        .isAfter(time);
   }
 
-  private class InvalidateInformation {
-
-    private final int port;
-    private final Date date;
-
-    public InvalidateInformation(final int port, final Date date) {
-      this.port = port;
-      this.date = date;
-    }
+  private String getKey(final String host, final int port) {
+    return host + ":" + port;
   }
 }

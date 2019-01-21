@@ -1,6 +1,6 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
-import java.util.Date;
+import java.time.Instant;
 import io.grpc.stub.StreamObserver;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
@@ -9,7 +9,7 @@ public class ExecuteTestRequest {
 
   private final GrpcExecuteTestRequest request;
   private final StreamObserver<GrpcExecuteTestResponse> streamObserver;
-  private final Date date;
+  private final Instant time;
   private final String senderName;
   private final int senderPort;
 
@@ -20,7 +20,7 @@ public class ExecuteTestRequest {
     this.streamObserver = streamObserver;
     this.senderName = senderName;
     this.senderPort = senderPort;
-    this.date = new Date();
+    this.time = Instant.now();
   }
 
   public GrpcExecuteTestRequest getRequest() {
@@ -31,8 +31,8 @@ public class ExecuteTestRequest {
     return streamObserver;
   }
 
-  public Date getDate() {
-    return date;
+  public Instant getTime() {
+    return time;
   }
 
   public int getSenderPort() {
