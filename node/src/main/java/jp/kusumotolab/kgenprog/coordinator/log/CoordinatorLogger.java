@@ -1,4 +1,4 @@
-package jp.kusumotolab.kgenprog.coordinator;
+package jp.kusumotolab.kgenprog.coordinator.log;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

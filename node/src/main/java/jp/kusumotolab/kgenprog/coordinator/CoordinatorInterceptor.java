@@ -14,6 +14,7 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
 import io.grpc.inprocess.InProcessSocketAddress;
+import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
 
 public class CoordinatorInterceptor implements ServerInterceptor {
 
