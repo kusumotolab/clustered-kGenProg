@@ -35,18 +35,12 @@ public class ProjectZipperTest {
         .filter(v -> v.path.endsWith("junit-4.12-kgp-custom.jar"))
         .findFirst()
         .get().path;
-    final Path originHamcrest = targetProject.getClassPaths()
-        .stream()
-        .filter(v -> v.path.endsWith("hamcrest-core-1.3.jar"))
-        .findFirst()
-        .get().path;
 
     // TargetProjectをzipする
     final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     final TargetProject zip = ProjectZipper.zipProject(targetProject, () -> outputStream);
 
     final Path zipJUnit = ProjectZipper.CLASSPATH_PREFIX.resolve("junit-4.12-kgp-custom.jar");
-    final Path zipHamcrest = ProjectZipper.CLASSPATH_PREFIX.resolve("hamcrest-core-1.3.jar");
 
     // 変換されたTargetProjectの確認
     assertThat(zip.rootPath).isEqualTo(ProjectZipper.PROJECT_PREFIX);
@@ -55,7 +49,7 @@ public class ProjectZipperTest {
     assertThat(zip.getTestSourcePaths()).extracting(v -> v.path)
         .containsExactly(Src.FOO_TEST);
     assertThat(zip.getClassPaths()).extracting(v -> v.path)
-        .contains(zipJUnit, zipHamcrest);
+        .contains(zipJUnit);
 
     // Unzipする
     final ByteArrayInputStream inputStream = new ByteArrayInputStream(outputStream.toByteArray());
@@ -67,8 +61,6 @@ public class ProjectZipperTest {
     final Path unzipFooTest = unzip.rootPath.resolve("src/example/FooTest.java");
     final Path unzipJUnit = destination.resolve(ProjectZipper.CLASSPATH_PREFIX)
         .resolve("junit-4.12-kgp-custom.jar");
-    final Path unzipHamcrest = destination.resolve(ProjectZipper.CLASSPATH_PREFIX)
-        .resolve("hamcrest-core-1.3.jar");
 
     // 変換されたTargetProjectの確認
     assertThat(unzip.rootPath).isEqualTo(destination.resolve(ProjectZipper.PROJECT_PREFIX));
@@ -77,13 +69,12 @@ public class ProjectZipperTest {
     assertThat(unzip.getTestSourcePaths()).extracting(v -> v.path)
         .containsExactly(Src.FOO_TEST);
     assertThat(unzip.getClassPaths()).extracting(v -> v.path)
-        .contains(unzipJUnit, unzipHamcrest);
+        .contains(unzipJUnit);
 
     // ファイルの内容がコピーされているか確認
     assertSameFile(originFoo, unzipFoo);
     assertSameFile(originFooTest, unzipFooTest);
     assertSameFile(originJUnit, unzipJUnit);
-    assertSameFile(originHamcrest, unzipHamcrest);
   }
 
   private void assertSameFile(final Path expect, final Path target) throws IOException {
