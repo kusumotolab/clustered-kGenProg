@@ -1,0 +1,28 @@
+buildscript {
+  repositories { jcenter() }
+  dependencies {
+    // Gradle linter
+    classpath 'com.netflix.nebula:gradle-lint-plugin:latest.release'
+  }
+}
+
+// Apply java plugin
+apply plugin: 'java'
+
+// Apply IDE plugins
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+// Set compiler version
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+// Set default encoding
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+
+// Configure gradle linter
+apply plugin: 'nebula.lint'
+gradleLint.rules = ['all-dependency'] // include all rules
+gradleLint.alwaysRun = false
+
