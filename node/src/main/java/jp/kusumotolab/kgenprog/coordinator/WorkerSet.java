@@ -4,14 +4,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
+import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
@@ -19,8 +18,8 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class WorkerSet {
 
-  private static final Logger log
-      = LoggerFactory.getLogger(WorkerSet.class);
+  private static final CoordinatorLogger coordinatorLogger =
+      CoordinatorLogger.getCoordinatorLogger();
 
   private final ConcurrentMap<Worker, Worker> workerMap = new ConcurrentHashMap<>();
   private final Subject<Worker> workerSubject;
@@ -42,7 +41,7 @@ public class WorkerSet {
       return nullObject;
     })
         .subscribe(o -> {
-        }, error -> log.error(error.toString()));
+        }, error -> coordinatorLogger.error(-1, error));
   }
 
   public void addWorker(final Worker worker) {
@@ -56,35 +55,33 @@ public class WorkerSet {
 
   protected void executeTest(final ExecuteTestRequest testRequest, final Worker worker) {
     final GrpcExecuteTestRequest request = testRequest.getRequest();
-    final StreamObserver<GrpcExecuteTestResponse> responseObserver = testRequest.getStreamObserver();
+    final StreamObserver<GrpcExecuteTestResponse> responseObserver =
+        testRequest.getStreamObserver();
 
     if (!requestValidator.validate(testRequest)) {
-      log.info("skip executeTestRequest");
-      log.debug(request.toString());
+      coordinatorLogger.skipExecuteTest(testRequest);
       workerSubject.onNext(worker);
       return;
     }
 
-    log.info("executeTest request");
-    log.debug(request.toString());
+    coordinatorLogger.startExecuteTest(testRequest, worker);
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
         .subscribe(response -> {
           workerSubject.onNext(worker);
+          coordinatorLogger.finishExecuteTest(testRequest, worker, response);
+
           try {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
-            log.info("executeTest response");
-            log.debug(response.toString());
           } catch (final RuntimeException e) {
             requestValidator.addInvalidateRequest(testRequest);
-            log.error(e.toString());
+            coordinatorLogger.error(testRequest.getRequestId(), e);
           }
         }, error -> {
           // workerとの通信が途絶えるとここに入る
-          log.info("failed executeTest");
-          log.error(error.toString());
+          coordinatorLogger.failedExecuteTest(testRequest, worker);
           testRequestSubject.onNext(testRequest);
           remove(worker);
         });
@@ -95,11 +92,11 @@ public class WorkerSet {
     workerMap.remove(worker);
   }
 
-  public void unregister(final GrpcUnregisterProjectRequest request) {
+  public void unregister(final int requestId, final GrpcUnregisterProjectRequest request) {
     for (final Worker worker : workerMap.values()) {
       worker.unregisterProject(request)
           .subscribe(r -> {
-          }, e -> log.error(e.toString()));
+          }, e -> coordinatorLogger.error(requestId, e));
     }
   }
 

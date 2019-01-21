@@ -46,7 +46,7 @@ public class WorkerSetTest {
     @SuppressWarnings("unchecked") final StreamObserver<GrpcExecuteTestResponse> mockObserver = mock(
         StreamObserver.class);
     final ExecuteTestRequest testRequest = new ExecuteTestRequest(request, mockObserver,
-        "localhost", 8080);
+        "localhost", 8080, 0, 0);
     final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder()
         .build();
 
@@ -126,7 +126,7 @@ public class WorkerSetTest {
     workerSet.addWorker(worker2);
     workerSet.addWorker(worker3);
 
-    workerSet.unregister(GrpcUnregisterProjectRequest.newBuilder()
+    workerSet.unregister(0, GrpcUnregisterProjectRequest.newBuilder()
         .build());
     verify(worker1, times(1)).unregisterProject(any());
     verify(worker2, times(1)).unregisterProject(any());

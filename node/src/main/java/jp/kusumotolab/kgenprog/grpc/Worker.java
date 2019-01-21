@@ -30,4 +30,8 @@ public interface Worker {
    * そのワーカーが終了したことを通知するメソッド
    */
   default void finish() { }
+  
+  int getId();
+  
+  String getName();
 }

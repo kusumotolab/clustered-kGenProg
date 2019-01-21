@@ -1,0 +1,4 @@
+.es(index="clustered-kgenprog", q="method:\"kgenprog.KGenProgCluster/executeTest\"", metric=max:responseTime).color(red),
+.es(index="clustered-kgenprog", q="method:\"kgenprog.KGenProgCluster/executeTest\"", metric=avg:responseTime).color(blue)
+
+

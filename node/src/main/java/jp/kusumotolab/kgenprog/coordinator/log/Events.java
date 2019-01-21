@@ -1,68 +1,63 @@
 package jp.kusumotolab.kgenprog.coordinator.log;
 
-import java.util.concurrent.Executor;
+import java.time.Instant;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import com.google.gson.JsonElement;
+import io.reactivex.Observable;
+import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
 
 public class Events {
 
-  Subject<Event> eventSubject;
+  Subject<EventBucket> eventSubject;
   ExecutorService executor;
-
+  Observable<JsonElement> eventObservable;
 
   public Events() {
-    eventSubject = PublishSubject.<Event>create()
+    eventSubject = PublishSubject.<EventBucket>create()
         .toSerialized();
 
-    eventSubject.subscribe(this::subscribeEvent);
     executor = Executors.newSingleThreadExecutor();
+    eventObservable = eventSubject.subscribeOn(Schedulers.from(executor))
+        .flatMap(EventBucket::consume);
 
     Runtime.getRuntime()
         .addShutdownHook(new Thread(this::shutdown));
   }
 
   public void addEvent(Event event) {
-    eventSubject.onNext(event);
+    eventSubject.onNext(new EventBucket(Instant.now(), event));
   }
-  
+
   public void shutdown() {
     executor.shutdown();
   }
+  
+  public Observable<JsonElement>  getEventObservable() {
+    return eventObservable;
+  }
 
-  private void subscribeEvent(Event event) {
-    event.accept(this);
-  }
-  
-  void visit(RequestStart event) {
-    
-  }
-  
-  void visit(RequestFinish event) {
-    
+  static class EventBucket {
+
+    private final Instant time;
+    private final Event event;
+
+    public EventBucket(Instant time, Event event) {
+      this.time = time;
+      this.event = event;
+    }
+
+    private Observable<JsonElement> consume() {
+      return event.consume(time);
+    }
   }
 
 }
 
-class RequestStart implements Event {
-
-  @Override
-  public void accept(Events events) {
-    events.visit(this);
-  }
-  
-}
-
-class RequestFinish implements Event {
-
-  @Override
-  public void accept(Events events) {
-    events.visit(this);
-  }
-  
-}
 
 interface Event {
-  void accept(Events events);
+
+  Observable<JsonElement> consume(Instant date);
 }
