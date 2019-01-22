@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Observable;
 import io.reactivex.Single;
@@ -11,13 +12,14 @@ import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.Subject;
 import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
+import jp.kusumotolab.kgenprog.coordinator.log.WorkerSetLogger;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestResponse;
 import jp.kusumotolab.kgenprog.grpc.GrpcUnregisterProjectRequest;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class WorkerSet {
-
+  private static final WorkerSetLogger workerSetLogger = WorkerSetLogger.getWorkerSetLogger();
   private static final CoordinatorLogger coordinatorLogger =
       CoordinatorLogger.getCoordinatorLogger();
 
@@ -26,6 +28,7 @@ public class WorkerSet {
   private final Subject<ExecuteTestRequest> testRequestSubject;
   private final ExecutorService executorService = Executors.newCachedThreadPool();
   private final RequestValidator requestValidator = new RequestValidator();
+  private final AtomicInteger testRequestIdCounter = new AtomicInteger(0);
 
   public WorkerSet() {
     final BehaviorSubject<Worker> workerBehaviorSubject = BehaviorSubject.create();
@@ -50,6 +53,7 @@ public class WorkerSet {
   }
 
   public void executeTest(final ExecuteTestRequest testRequest) {
+    workerSetLogger.offerExecuteTest(testRequest);
     testRequestSubject.onNext(testRequest);
   }
 
@@ -59,18 +63,20 @@ public class WorkerSet {
         testRequest.getStreamObserver();
 
     if (!requestValidator.validate(testRequest)) {
-      coordinatorLogger.skipExecuteTest(testRequest);
+      workerSetLogger.skipExecuteTest(testRequest);
       workerSubject.onNext(worker);
       return;
     }
+    
+    final int testReuquestId = testRequestIdCounter.getAndIncrement();
 
-    coordinatorLogger.startExecuteTest(testRequest, worker);
+    workerSetLogger.startExecuteTest(testRequest, testReuquestId, worker);
 
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
         .subscribe(response -> {
           workerSubject.onNext(worker);
-          coordinatorLogger.finishExecuteTest(testRequest, worker, response);
+          workerSetLogger.finishExecuteTest(testRequest, testReuquestId, worker, response);
 
           try {
             responseObserver.onNext(response);
@@ -81,7 +87,7 @@ public class WorkerSet {
           }
         }, error -> {
           // workerとの通信が途絶えるとここに入る
-          coordinatorLogger.failedExecuteTest(testRequest, worker);
+          workerSetLogger.failedExecuteTest(testRequest, testReuquestId, worker);
           testRequestSubject.onNext(testRequest);
           remove(worker);
         });

@@ -1,9 +1,17 @@
 package jp.kusumotolab.kgenprog.coordinator.log;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import com.google.gson.JsonElement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
@@ -11,11 +19,24 @@ import io.reactivex.subjects.Subject;
 
 public class Events {
 
+  private static final Logger log = LoggerFactory.getLogger(Events.class);
+  private static final Gson gson = createGson();
+  public static final Events events = new Events();
+
+  static {
+    events.eventObservable.subscribe(doc -> {
+      JsonObject object = new JsonObject();
+      object.addProperty("type", doc.getType());
+      object.add(doc.getType(), gson.toJsonTree(doc));
+      log.info(gson.toJson(object));
+    });
+  }
+
   Subject<EventBucket> eventSubject;
   ExecutorService executor;
-  Observable<JsonElement> eventObservable;
+  Observable<EventDocument> eventObservable;
 
-  public Events() {
+  private Events() {
     eventSubject = PublishSubject.<EventBucket>create()
         .toSerialized();
 
@@ -34,8 +55,8 @@ public class Events {
   public void shutdown() {
     executor.shutdown();
   }
-  
-  public Observable<JsonElement>  getEventObservable() {
+
+  public Observable<EventDocument> getEventObservable() {
     return eventObservable;
   }
 
@@ -49,15 +70,19 @@ public class Events {
       this.event = event;
     }
 
-    private Observable<JsonElement> consume() {
+    private Observable<EventDocument> consume() {
       return event.consume(time);
     }
   }
 
-}
+  private static Gson createGson() {
+    final GsonBuilder gsonBuilder = new GsonBuilder();
+    gsonBuilder.registerTypeAdapter(Instant.class,
+        (JsonSerializer<Instant>) ((src, typeOfSrc, context) -> {
+          ZonedDateTime zonedDateTime = src.atZone(ZoneId.systemDefault());
+          return new JsonPrimitive(zonedDateTime.toString());
+        }));
 
-
-interface Event {
-
-  Observable<JsonElement> consume(Instant date);
+    return gsonBuilder.create();
+  }
 }
