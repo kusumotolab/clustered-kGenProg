@@ -22,7 +22,6 @@ import jp.kusumotolab.kgenprog.ga.selection.VariantSelection;
 import jp.kusumotolab.kgenprog.ga.validation.DefaultCodeValidation;
 import jp.kusumotolab.kgenprog.ga.validation.SourceCodeValidation;
 import jp.kusumotolab.kgenprog.output.PatchGenerator;
-import jp.kusumotolab.kgenprog.project.test.ParallelTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
 
 public class ClientLauncher {
@@ -53,12 +52,11 @@ public class ClientLauncher {
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
     final TestExecutor testExecutor = new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
-    final ParallelTestExecutor parallelTestExecutor = new ParallelTestExecutor(testExecutor);
     final PatchGenerator patchGenerator = new PatchGenerator();
 
     final KGenProgMain kGenProgMain =
         new KGenProgMain(config, faultLocalization, mutation, crossover, sourceCodeGeneration,
-            sourceCodeValidation, variantSelection, parallelTestExecutor, patchGenerator);
+            sourceCodeValidation, variantSelection, testExecutor, patchGenerator);
 
     kGenProgMain.run();
   }
