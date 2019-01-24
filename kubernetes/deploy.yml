@@ -1,0 +1,96 @@
+---
+# Coordinator を配置するマニフェスト
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clustered-kgenprog-coordinator
+spec:
+  strategy:
+    type: Recreate
+  minReadySeconds: 5
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coordinator
+  template:
+    metadata:
+      labels:
+        app: coordinator
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: coordinator-container
+          image: kusumotolab/clustered-kgenprog:latest
+          command: ["/home/kgenprog/bin/kGenProg-coordinator"]
+          args: ["--port", "50051"]
+          resources:
+            requests:
+              memory: 100Mi #1024Mi
+              cpu: 300m #1000m
+          ports:
+            - containerPort: 50051
+---
+# Worker を配置するマニフェスト
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clustered-kgenprog-workers
+spec:
+  strategy:
+    type: Recreate
+  minReadySeconds: 5
+  replicas: 3
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: worker
+          image: kusumotolab/clustered-kgenprog:latest
+          command: ["/home/kgenprog/bin/kGenProg-worker"]
+          args: ["--host", "coordinator-externalip", "--port", "50051"]
+          resources:
+            requests:
+              memory: 100Mi #1024Mi
+              cpu: 300m #1000m
+          ports:
+            - containerPort: 50051
+---
+# Coordinator にアクセスするためのエンドポイントを作成するマニフェスト
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: coordinator-externalip
+# spec:
+#   type: ClusterIP
+#   externalIPs:
+#     - 10.0.2.15 # Coordinator の Pod が展開されているノードの IP を指定
+#   ports:
+#     - name: "http-port"
+#       protocol: "TCP"
+#       port: 50051
+#       targetPort: 50051
+#   selector:
+#     app: coordinator
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: coordinator-externalip
+spec:
+  type: NodePort
+  ports:
+    - name: "http-port"
+      protocol: "TCP"
+      port: 50051
+      targetPort: 50051
+      nodePort: 30080
+  selector:
+    app: coordinator
