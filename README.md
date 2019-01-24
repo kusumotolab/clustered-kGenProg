@@ -13,17 +13,24 @@ git submodule update --init
 ./gradlew installDist
 ```
 
-## Run Server
+## Run Coordinator
 
 ```
 ./node/build/install/node/bin/kGenProg-coordinator \
   --port 50051
 ```
 
+## Run Worker (As many as you want)
+
+```
+./node/build/install/node/bin/kGenProg-worker \
+  --host <Coordinator's Host> --port 50051
+```
+
 ## Run Client
 
 ```
 ./node/build/install/node/bin/kGenProg-client \
-  --host localhost --port 50051 \
+  --host <Worker's Host> --port 50051 \
   --kgp-args '--config main/example/CloseToZero01/kgenprog.toml'
 ```
