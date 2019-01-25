@@ -27,19 +27,16 @@ spec:
             - containerPort: 50051
           resources:
             requests:
-              memory: 100Mi #1024Mi
-              cpu: 300m #1000m
+              memory: 2048Mi
+              cpu: 1500m
 
 ---
 # Coordinator にアクセスするためのエンドポイントを作成するマニフェスト
 apiVersion: v1
 kind: Service
 metadata:
-  name: c-kgp-externalip
+  name: c-kgp-coordinator-nodeport
 spec:
-  # type: ClusterIP
-  # externalIPs:
-  #   - 10.0.2.15 # Coordinator の Pod が展開されているノードの IP を指定
   type: NodePort
   ports:
     - name: "http-port"
@@ -60,7 +57,7 @@ spec:
   strategy:
     type: Recreate
   minReadySeconds: 5
-  replicas: 3
+  replicas: 5 # Worker の数を指定
   selector:
     matchLabels:
       app: c-kgp-workers
@@ -75,10 +72,10 @@ spec:
         - name: c-kgp-worker-container
           image: kusumotolab/clustered-kgenprog:latest
           command: ["/home/kgenprog/bin/kGenProg-worker"]
-          args: ["--host", "c-kgp-externalip", "--port", "50051"]
+          args: ["--host", "c-kgp-coordinator-nodeport", "--port", "50051"]
           ports:
             - containerPort: 50051
           resources:
             requests:
-              memory: 100Mi #1024Mi
-              cpu: 300m #1000m
+              memory: 2048Mi
+              cpu: 1000m
