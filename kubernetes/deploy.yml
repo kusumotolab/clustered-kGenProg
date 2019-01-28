@@ -20,7 +20,7 @@ spec:
         - name: regcred
       containers:
         - name: c-kgp-coordinator-container
-          image: kusumotolab/clustered-kgenprog:latest
+          image: kusumotolab/clustered-kgenprog:exp-for-ase
           command: ["/home/kgenprog/bin/kGenProg-coordinator"]
           args: ["--port", "50051"]
           ports:
@@ -70,7 +70,7 @@ spec:
         - name: regcred
       containers:
         - name: c-kgp-worker-container
-          image: kusumotolab/clustered-kgenprog:latest
+          image: kusumotolab/clustered-kgenprog:exp-for-ase
           command: ["/home/kgenprog/bin/kGenProg-worker"]
           args: ["--host", "c-kgp-coordinator-nodeport", "--port", "50051"]
           ports:
