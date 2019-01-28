@@ -19,7 +19,7 @@ public class RequestValidator {
     final Instant time = invalidateTimeMap.get(key);
 
     if (time == null) {
-      return true;
+        return true;
     }
 
     // 失敗した後に来たリクエストは許可する

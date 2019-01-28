@@ -2,10 +2,12 @@ package jp.kusumotolab.kgenprog.coordinator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
@@ -14,6 +16,8 @@ import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
+import io.reactivex.Completable;
+import io.reactivex.schedulers.Schedulers;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
@@ -44,8 +48,10 @@ public class Coordinator {
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
-        .addService(ServerInterceptors.intercept(new KGenProgCluster(this), clientHostAddressCaptor))
-        .addService(ServerInterceptors.intercept(new CoordinatorService(this), clientHostAddressCaptor))
+        .addService(
+            ServerInterceptors.intercept(new KGenProgCluster(this), clientHostAddressCaptor))
+        .addService(
+            ServerInterceptors.intercept(new CoordinatorService(this), clientHostAddressCaptor))
         .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
 
@@ -74,6 +80,7 @@ public class Coordinator {
     final int projectId = idCounter.getAndIncrement();
     binaryMap.put(projectId, request.getProject());
     configurationMap.put(projectId, request.getConfiguration());
+    distributeAllWorker(projectId);
 
     final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
         .setProjectId(projectId)
@@ -158,7 +165,6 @@ public class Coordinator {
     log.debug(response.toString());
   }
 
-
   // 以下はテスト用メソッド
   protected List<ServerServiceDefinition> getServices() {
     return services;
@@ -169,6 +175,27 @@ public class Coordinator {
   }
 
   protected void addWorker(final Worker worker) {
+    for (final Integer projectId : binaryMap.keySet()) {
+      final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+          .setProjectId(projectId)
+          .build();
+      worker.executeTest(request)
+          .blockingGet();
+    }
     workerSet.addWorker(worker);
+  }
+
+  private void distributeAllWorker(final int projectId) {
+    final Collection<Worker> allWorker = workerSet.getAllWorker();
+    final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+        .setProjectId(projectId)
+        .build();
+    final List<Completable> completableList = allWorker.stream()
+        .map(e -> e.executeTest(request)
+            .subscribeOn(Schedulers.from(workerSet.getExecutorService())))
+        .map(Completable::fromSingle)
+        .collect(Collectors.toList());
+    Completable.merge(completableList)
+        .blockingGet();
   }
 }
