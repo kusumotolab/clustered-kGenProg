@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -34,23 +35,26 @@ import jp.kusumotolab.kgenprog.project.jdt.InsertOperation;
 import jp.kusumotolab.kgenprog.project.jdt.JDTASTConstruction;
 import jp.kusumotolab.kgenprog.project.jdt.JDTASTLocation;
 import jp.kusumotolab.kgenprog.project.jdt.ReplaceOperation;
+import jp.kusumotolab.kgenprog.project.test.CompressedCoverage;
 import jp.kusumotolab.kgenprog.project.test.Coverage;
 import jp.kusumotolab.kgenprog.project.test.EmptyTestResults;
+import jp.kusumotolab.kgenprog.project.test.RawCoverage;
 import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 
 
 /**
  * KGenProgクラスとgRPCクラスの相互変換を行うメソッド群
- * 
+ *
  * <pre>
- * serialize: KGenProg -> gRPC 
+ * serialize: KGenProg -> gRPC
  * deserialize: gRPC -> KGenProg
  * </pre>
  */
 public final class Serializer {
 
-  private Serializer() {}
+  private Serializer() {
+  }
 
   public static GrpcConfiguration serialize(final Configuration configuration) {
     final TargetProject project = configuration.getTargetProject();
@@ -162,12 +166,21 @@ public final class Serializer {
   }
 
   public static GrpcCoverage serialize(final Coverage coverage) {
-    final Stream<GrpcCoverage.Status> statuses = coverage.statuses.stream()
-        .map(Serializer::serialize);
-
-    final GrpcCoverage.Builder builder = GrpcCoverage.newBuilder()
-        .setExecutedTargetFQN(coverage.executedTargetFQN.value)
-        .addAllStatus(statuses::iterator);
+    final GrpcCoverage.Builder builder;
+    if (hasCovered(coverage)) {
+      final Stream<GrpcCoverage.Status> statuses = extractStatuses(coverage).map(
+          Serializer::serialize);
+      builder = GrpcCoverage.newBuilder()
+          .setExecutedTargetFQN(coverage.getExecutedTargetFQN().value)
+          .setHasCovered(true)
+          .setSetStatusSize(coverage.getStatusesSize())
+          .addAllStatus(statuses::iterator);
+    } else {
+      builder = GrpcCoverage.newBuilder()
+          .setExecutedTargetFQN(coverage.getExecutedTargetFQN().value)
+          .setSetStatusSize(coverage.getStatusesSize())
+          .setHasCovered(false);
+    }
 
     return builder.build();
   }
@@ -294,17 +307,20 @@ public final class Serializer {
         .values()
         .stream()
         .map(Serializer::deserialize)
-        .collect(Collectors.toMap(c -> c.executedTargetFQN, c -> c));
+        .collect(Collectors.toMap(c -> c.getExecutedTargetFQN(), c -> c));
     return new TestResult(fqn, result.getFailed(), map);
   }
 
   public static Coverage deserialize(final GrpcCoverage coverage) {
     final FullyQualifiedName fqn = new TargetFullyQualifiedName(coverage.getExecutedTargetFQN());
+    if (!coverage.getHasCovered()) {
+      return new CompressedCoverage(fqn, coverage.getSerializedSize());
+    }
     final List<Coverage.Status> statuses = coverage.getStatusList()
         .stream()
         .map(Serializer::deserialize)
         .collect(Collectors.toList());
-    return new Coverage(fqn, statuses);
+    return new RawCoverage(fqn, statuses);
   }
 
   public static Map<ProductSourcePath, Set<FullyQualifiedName>> deserialize(final Path rootPath,
@@ -340,7 +356,7 @@ public final class Serializer {
 
   /**
    * ConfigurationのTargetProjectを更新する
-   * 
+   *
    * @param origin もとになるConfiguration
    * @param project 更新内容の含まれるTargetProject
    * @return 更新されたConfiguration
@@ -399,5 +415,14 @@ public final class Serializer {
     final Object result = ((Block) block).statements()
         .get(0);
     return (Statement) result;
+  }
+
+  private static Stream<Coverage.Status> extractStatuses(final Coverage coverage) {
+    return IntStream.range(0, coverage.getStatusesSize())
+        .mapToObj(coverage::getStatus);
+  }
+
+  private static boolean hasCovered(final Coverage coverage) {
+    return extractStatuses(coverage).anyMatch(e -> e == Coverage.Status.COVERED);
   }
 }
