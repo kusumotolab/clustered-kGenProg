@@ -34,6 +34,7 @@ import jp.kusumotolab.kgenprog.project.test.LocalTestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
+import jp.kusumotolab.kgenprog.testutil.CoverageUtil;
 import jp.kusumotolab.kgenprog.testutil.TestUtil;
 
 public class ProjectTest {
@@ -138,6 +139,7 @@ public class ProjectTest {
   }
 
   private void assertCoverage(final Coverage remote, final Coverage local) {
-    assertThat(remote.statuses).containsExactlyElementsOf(local.statuses);
+    assertThat(CoverageUtil.extractStatuses(remote)).containsExactlyElementsOf(
+        CoverageUtil.extractStatuses(local));
   }
 }

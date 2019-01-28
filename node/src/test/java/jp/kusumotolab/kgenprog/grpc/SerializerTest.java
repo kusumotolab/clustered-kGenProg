@@ -42,6 +42,7 @@ import jp.kusumotolab.kgenprog.project.test.TestExecutor;
 import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
 import jp.kusumotolab.kgenprog.testutil.ExampleAlias.Src;
+import jp.kusumotolab.kgenprog.testutil.CoverageUtil;
 import jp.kusumotolab.kgenprog.testutil.TestUtil;
 
 public class SerializerTest {
@@ -148,7 +149,7 @@ public class SerializerTest {
     assertThat(grpcBase1.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase1.getLocation()
-        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 0});
     assertThat(grpcBase1.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.DELETE);
@@ -158,7 +159,7 @@ public class SerializerTest {
     assertThat(grpcBase2.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase2.getLocation()
-        .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
+            .getLocationList(), new String[] {"types", "bodyDeclarations", "body", "statements"},
         new int[] {0, 0, 0, 1});
     assertThat(grpcBase2.getOperation()
         .getType()).isEqualTo(GrpcOperation.Type.INSERT);
@@ -170,7 +171,7 @@ public class SerializerTest {
     assertThat(grpcBase3.getLocation()
         .getSourcePath()).isEqualTo("A.java");
     assertTreePathElement(grpcBase3.getLocation()
-        .getLocationList(),
+            .getLocationList(),
         new String[] {"types", "bodyDeclarations", "body", "statements", "thenStatement",
             "statements"},
         new int[] {0, 0, 0, 1, -1, 0});
@@ -208,7 +209,7 @@ public class SerializerTest {
     assertThat(deserializedBase2.getOperation()).isInstanceOf(InsertOperation.class);
     assertThat(deserializedBase2.getOperation()
         .getTargetSnippet()).isEqualTo(statements.get(6)
-            .toString());
+        .toString());
 
     // Replace
     final Base deserializedBase3 = deserialized.getBases()
@@ -223,7 +224,7 @@ public class SerializerTest {
     assertThat(deserializedBase3.getOperation()).isInstanceOf(ReplaceOperation.class);
     assertThat(deserializedBase3.getOperation()
         .getTargetSnippet()).isEqualTo(statements.get(8)
-            .toString());
+        .toString());
   }
 
   private void assertTreePathElement(final List<GrpcTreePathElement> target, final String[] id,
@@ -311,11 +312,11 @@ public class SerializerTest {
     final TestResult fooTest01result = deserialized.getTestResult(FOO_TEST01);
     final TestResult fooTest04result = deserialized.getTestResult(FOO_TEST04);
 
-    assertThat(fooTest01result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
-        COVERED, COVERED, EMPTY, EMPTY, NOT_COVERED, EMPTY, COVERED);
+    assertThat(CoverageUtil.extractStatuses(fooTest01result.getCoverages(FOO))).containsExactly(
+        EMPTY, COVERED, EMPTY, COVERED, COVERED, EMPTY, EMPTY, NOT_COVERED, EMPTY, COVERED);
 
-    assertThat(fooTest04result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
-        COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
+    assertThat(CoverageUtil.extractStatuses(fooTest04result.getCoverages(FOO))).containsExactly(
+        EMPTY, COVERED, EMPTY, COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
 
   }
 }

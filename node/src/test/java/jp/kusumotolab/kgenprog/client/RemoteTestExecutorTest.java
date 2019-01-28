@@ -47,6 +47,7 @@ import jp.kusumotolab.kgenprog.project.factory.TargetProject;
 import jp.kusumotolab.kgenprog.project.factory.TargetProjectFactory;
 import jp.kusumotolab.kgenprog.project.test.TestResult;
 import jp.kusumotolab.kgenprog.project.test.TestResults;
+import jp.kusumotolab.kgenprog.testutil.CoverageUtil;
 import jp.kusumotolab.kgenprog.testutil.TestUtil;
 
 public class RemoteTestExecutorTest {
@@ -115,12 +116,12 @@ public class RemoteTestExecutorTest {
     final TestResult fooTest04result = result.getTestResult(FOO_TEST04);
 
     // FooTest.test01 実行によるFooのカバレッジはこうなるはず
-    assertThat(fooTest01result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
-        COVERED, COVERED, EMPTY, EMPTY, NOT_COVERED, EMPTY, COVERED);
+    assertThat(CoverageUtil.extractStatuses(fooTest01result.getCoverages(FOO))).containsExactly(
+        EMPTY, COVERED, EMPTY, COVERED, COVERED, EMPTY, EMPTY, NOT_COVERED, EMPTY, COVERED);
 
     // FooTest.test04 実行によるFooのバレッジはこうなるはず
-    assertThat(fooTest04result.getCoverages(FOO).statuses).containsExactly(EMPTY, COVERED, EMPTY,
-        COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
+    assertThat(CoverageUtil.extractStatuses(fooTest04result.getCoverages(FOO))).containsExactly(
+        EMPTY, COVERED, EMPTY, COVERED, NOT_COVERED, EMPTY, EMPTY, COVERED, EMPTY, COVERED);
   }
 
   @Test
