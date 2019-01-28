@@ -10,8 +10,8 @@ import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.Strategies;
 import jp.kusumotolab.kgenprog.fl.FaultLocalization;
 import jp.kusumotolab.kgenprog.fl.Ochiai;
-import jp.kusumotolab.kgenprog.ga.codegeneration.DefaultSourceCodeGeneration;
 import jp.kusumotolab.kgenprog.ga.codegeneration.SourceCodeGeneration;
+import jp.kusumotolab.kgenprog.ga.codegeneration.WorkerCodeGeneration;
 import jp.kusumotolab.kgenprog.ga.selection.GenerationalVariantSelection;
 import jp.kusumotolab.kgenprog.ga.selection.VariantSelection;
 import jp.kusumotolab.kgenprog.ga.validation.DefaultCodeValidation;
@@ -120,7 +120,7 @@ public class Project {
   private Strategies createStrategies(final Configuration configuration) {
     final FaultLocalization faultLocaliztion = new Ochiai();
     final JDTASTConstruction astConstruction = new JDTASTConstruction();
-    final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
+    final SourceCodeGeneration sourceCodeGeneration = new WorkerCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final TestExecutor testExecutor = new LocalTestExecutor(configuration);
     final VariantSelection variantSelection =
