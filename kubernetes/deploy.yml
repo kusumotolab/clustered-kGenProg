@@ -6,7 +6,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
-  minReadySeconds: 5
+  minReadySeconds: 3
   replicas: 1
   selector:
     matchLabels:
@@ -57,7 +57,7 @@ metadata:
 spec:
   strategy:
     type: Recreate
-  minReadySeconds: 5
+  minReadySeconds: 3
   replicas: 5 # Worker の数を指定
   selector:
     matchLabels:
