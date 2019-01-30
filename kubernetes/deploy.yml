@@ -27,7 +27,7 @@ spec:
             - containerPort: 50051
           resources:
             requests:
-              memory: 2048Mi
+              memory: 8192Mi
               cpu: 1500m
 
 ---
@@ -57,7 +57,7 @@ spec:
   strategy:
     type: Recreate
   minReadySeconds: 5
-  replicas: 30 # Worker の数を指定
+  replicas: 32 # Worker の数を指定
   selector:
     matchLabels:
       app: c-kgp-workers
