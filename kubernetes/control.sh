@@ -45,7 +45,7 @@ do
       exit 1
     fi
 
-    if [[ $COORDINATOR_RESTARTS -ge 1 ]]; then
+    if [[ $COORDINATOR_RESTARTS -ge '1' ]]; then
       warn 'Coordinator seems to have crashed!'
       notice 'Deleting existing services ...'
       kubectl --namespace $NAMESPACE delete -f ${SCRIPT_DIR}/deploy.yml
