@@ -92,7 +92,7 @@ git submodule update --init
 ### TIPS: Namespace 切り替え
 
 k8s には **Namespace** という概念があります．  
-自分用の Namespace を設定することで他人に勝手にサービスを止めらる危険性を減らせます．  
+自分用の Namespace を設定することで他人に勝手にサービスを止められる危険性を減らせます．  
 また，同様の構成を持つサービスを複数同時に起動したい際にも有効です．
 
 なお，デフォルトでは `default` という Namespace を操作します．
