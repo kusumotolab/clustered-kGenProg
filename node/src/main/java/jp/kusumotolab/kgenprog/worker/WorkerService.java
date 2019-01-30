@@ -55,6 +55,7 @@ public class WorkerService extends KGenProgClusterImplBase {
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+      System.exit(0);
     }, e -> {
       log.error(e.toString());
       responseObserver.onError(e);
