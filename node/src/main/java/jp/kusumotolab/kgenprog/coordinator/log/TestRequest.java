@@ -15,7 +15,8 @@ class TestRequest implements EventDocument {
   boolean success;
   boolean buildSuccess;
 
-  public TestRequest(int testRequestId, int testId, Instant startDate, Worker worker) {
+  public TestRequest(final int testRequestId, final int testId, final Instant startDate,
+      final Worker worker) {
     this.testRequestId = testRequestId;
     this.testId = testId;
     this.startDate = startDate;
@@ -23,7 +24,7 @@ class TestRequest implements EventDocument {
     this.workerName = worker.getName();
   }
 
-  public void setResponseTime(Instant finishTime) {
+  public void setResponseTime(final Instant finishTime) {
     this.responseTime = Duration.between(startDate, finishTime)
         .toMillis();
   }

@@ -78,7 +78,7 @@ public class CoordinatorInterceptor implements ServerInterceptor {
     private final String clientIp;
     private final String requestMethod;
 
-    protected ServerCallWrapper(ServerCall<ReqT, RespT> delegate, final int requestId,
+    protected ServerCallWrapper(final ServerCall<ReqT, RespT> delegate, final int requestId,
         final String clientIp) {
       super(delegate);
       this.requestMethod = delegate.getMethodDescriptor()

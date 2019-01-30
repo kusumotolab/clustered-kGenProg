@@ -25,7 +25,7 @@ public class Events {
 
   static {
     events.eventObservable.subscribe(doc -> {
-      JsonObject object = new JsonObject();
+      final JsonObject object = new JsonObject();
       object.addProperty("type", doc.getType());
       object.add(doc.getType(), gson.toJsonTree(doc));
       log.info(gson.toJson(object));
@@ -48,7 +48,7 @@ public class Events {
         .addShutdownHook(new Thread(this::shutdown));
   }
 
-  public void addEvent(Event event) {
+  public void addEvent(final Event event) {
     eventSubject.onNext(new EventBucket(Instant.now(), event));
   }
 
@@ -65,7 +65,7 @@ public class Events {
     private final Instant time;
     private final Event event;
 
-    public EventBucket(Instant time, Event event) {
+    public EventBucket(final Instant time, final Event event) {
       this.time = time;
       this.event = event;
     }
@@ -79,7 +79,7 @@ public class Events {
     final GsonBuilder gsonBuilder = new GsonBuilder();
     gsonBuilder.registerTypeAdapter(Instant.class,
         (JsonSerializer<Instant>) ((src, typeOfSrc, context) -> {
-          ZonedDateTime zonedDateTime = src.atZone(ZoneId.systemDefault());
+          final ZonedDateTime zonedDateTime = src.atZone(ZoneId.systemDefault());
           return new JsonPrimitive(zonedDateTime.toString());
         }));
 

@@ -6,7 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import jp.kusumotolab.kgenprog.grpc.Worker;
 
-@SuppressWarnings("unused") class Request implements EventDocument {
+@SuppressWarnings("unused")
+class Request implements EventDocument {
 
   public int requestId;
   public String method;
@@ -21,7 +22,7 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
   public int testId;
   public boolean testSuccess;
 
-  public Request(int requestId, String method, Instant startDate) {
+  public Request(final int requestId, final String method, final Instant startDate) {
     this.requestId = requestId;
     this.method = method;
     this.startDate = startDate;
@@ -29,12 +30,12 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
     errors = new ArrayList<>(0);
   }
 
-  public void setResponseTime(Instant finishTime) {
+  public void setResponseTime(final Instant finishTime) {
     this.responseTime = Duration.between(startDate, finishTime)
         .toMillis();
   }
 
-  public void setWorker(Worker worker) {
+  public void setWorker(final Worker worker) {
     this.workerId = worker.getId();
     this.workerName = worker.getName();
   }

@@ -20,22 +20,22 @@ public class CoordinatorLogger {
     return coordinatorLogger;
   }
 
-  private Events events;
-  private Map<Integer, Request> requestMap;
-  private Map<String, Integer> queueCount;
+  private final Events events;
+  private final Map<Integer, Request> requestMap;
+  private final Map<String, Integer> queueCount;
 
-  private CoordinatorLogger(Events events) {
+  private CoordinatorLogger(final Events events) {
     this.events = events;
     requestMap = new HashMap<>();
     queueCount = new HashMap<>();
   }
 
 
-  public void startRequest(final int requestId, final String method, String clientIp) {
+  public void startRequest(final int requestId, final String method, final String clientIp) {
     events.addEvent(time -> {
       requestMap.put(requestId, new Request(requestId, method, time));
 
-      RequestQueue requestQueue = updateQueueCount(time, method, 1);
+      final RequestQueue requestQueue = updateQueueCount(time, method, 1);
 
       return Observable.just(requestQueue);
     });
@@ -46,7 +46,7 @@ public class CoordinatorLogger {
       final GrpcRegisterProjectResponse registerProjectResponse) {
 
     events.addEvent(time -> {
-      Request request = requestMap.get(requestId);
+      final Request request = requestMap.get(requestId);
 
       request.status = registerProjectResponse.getStatus();
       request.projectId = registerProjectResponse.getProjectId();
@@ -55,10 +55,10 @@ public class CoordinatorLogger {
     });
   }
 
-  public void unregisterProject(int requestId,
-      GrpcUnregisterProjectResponse unregisterProjectResponse) {
+  public void unregisterProject(final int requestId,
+      final GrpcUnregisterProjectResponse unregisterProjectResponse) {
     events.addEvent(date -> {
-      Request request = requestMap.get(requestId);
+      final Request request = requestMap.get(requestId);
       request.status = unregisterProjectResponse.getStatus();
       return Observable.empty();
     });
@@ -67,7 +67,7 @@ public class CoordinatorLogger {
   public void registerWorker(final int requestId, final Worker worker,
       final GrpcRegisterWorkerResponse response) {
     events.addEvent(date -> {
-      Request request = requestMap.get(requestId);
+      final Request request = requestMap.get(requestId);
 
       request.status = response.getStatus();
       request.setWorker(worker);
@@ -79,7 +79,7 @@ public class CoordinatorLogger {
   public void getProject(final int requestId, final GrpcGetProjectRequest getProjectRequest,
       final GrpcGetProjectResponse response) {
     events.addEvent(date -> {
-      Request request = requestMap.get(requestId);
+      final Request request = requestMap.get(requestId);
 
       request.projectId = getProjectRequest.getProjectId();
       request.status = response.getStatus();
@@ -89,7 +89,7 @@ public class CoordinatorLogger {
 
   public void error(final int requestId, final Throwable error) {
     events.addEvent(date -> {
-      Request request = requestMap.get(requestId);
+      final Request request = requestMap.get(requestId);
 
       request.errors.add(new ErrorMessage(error));
       return Observable.empty();
@@ -98,17 +98,17 @@ public class CoordinatorLogger {
 
   public void finishRequest(final int requestId, final String clientIp) {
     events.addEvent(date -> {
-      Request request = requestMap.remove(requestId);
+      final Request request = requestMap.remove(requestId);
       request.setResponseTime(date);
 
-      RequestQueue requestQueue = updateQueueCount(date, request.method, -1);
+      final RequestQueue requestQueue = updateQueueCount(date, request.method, -1);
 
       return Observable.just(request, requestQueue);
     });
   }
 
-  private RequestQueue updateQueueCount(Instant date, String method, int diff) {
-    Integer update = queueCount.merge(method, diff, (a, b) -> a + b);
+  private RequestQueue updateQueueCount(final Instant date, final String method, final int diff) {
+    final Integer update = queueCount.merge(method, diff, (a, b) -> a + b);
     return new RequestQueue(date, method, update);
   }
 }
