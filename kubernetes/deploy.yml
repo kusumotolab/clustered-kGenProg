@@ -16,8 +16,8 @@ spec:
       labels:
         app: c-kgp-coordinator
     spec:
-      imagePullSecrets:
-        - name: regcred
+      imagePullSecrets: # Docker Hub 上の *private な* イメージを利用するのに必要
+        - name: regcred # c.f. https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
       containers:
         - name: c-kgp-coordinator-container
           image: kusumotolab/clustered-kgenprog:latest
@@ -28,7 +28,7 @@ spec:
             - containerPort: 50051
           resources:
             requests:
-              memory: 2048Mi
+              memory: 2048Mi  # Coordinator を起動するコンテナのスペックを指定
               cpu: 1500m
 
 ---
@@ -44,7 +44,8 @@ spec:
       protocol: "TCP"
       port: 50051
       targetPort: 50051
-      nodePort: 30080
+      nodePort: 30080 # k8s 環境の外からアクセスしてくるためのポート
+                      # k8s 環境全体でユニークにしておくこと
   selector:
     app: c-kgp-coordinator
 
@@ -79,5 +80,5 @@ spec:
             - containerPort: 50051
           resources:
             requests:
-              memory: 2048Mi
+              memory: 2048Mi  # Worker を起動する各コンテナのスペックを指定
               cpu: 1000m
