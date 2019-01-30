@@ -30,24 +30,6 @@ spec:
             requests:
               memory: 2048Mi  # Coordinator を起動するコンテナのスペックを指定
               cpu: 1500m
-          volumeMounts:
-            - mountPath: /cache
-              name: last-uptime-info-storage
-          livenessProbe:
-            exec:
-              command: ["/home/kgenprog/liveness-probe-script-on-coordinator.sh"]
-            initialDelaySeconds: 3
-            periodSeconds: 10
-            failureThreshold: 1
-        # - name: c-kgp-coordinator-hostname-server-container
-        #   image: nginx:1.15.8-alpine
-        #   command: ["sh", "-c", "cp /etc/hostname /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]
-        #   args: []
-        #   ports:
-        #     - containerPort: 80
-      volumes:
-        - name: last-uptime-info-storage
-          emptyDir: {}
 
 ---
 # Coordinator にアクセスするためのエンドポイントを作成するマニフェスト

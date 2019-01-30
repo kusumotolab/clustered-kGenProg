@@ -17,7 +17,6 @@ USER kgenprog
 WORKDIR /home/kgenprog
 
 COPY --from=builder /root/node/build/install/node .
-COPY ./kubernetes/liveness-probe-script-on-coordinator.sh .
 
 EXPOSE 50051
 
