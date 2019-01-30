@@ -17,7 +17,7 @@ import com.electronwill.nightconfig.core.file.FileConfig;
 public class ClusterConfiguration {
 
   public static final int DEFAULT_PORT = 50051;
-  public static final int DEFAULT_KEEPALIVE_SECONDS = 60;
+  public static final int DEFAULT_KEEPALIVE_SECONDS = Integer.MAX_VALUE;
 
   private final Path workingDir;
   private final int port;
