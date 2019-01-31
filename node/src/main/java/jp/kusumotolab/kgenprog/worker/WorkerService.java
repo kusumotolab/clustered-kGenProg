@@ -30,7 +30,6 @@ public class WorkerService extends KGenProgClusterImplBase {
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribe(response -> {
       log.info("executeTest response");
-      log.debug(response.toString());
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();
@@ -45,13 +44,11 @@ public class WorkerService extends KGenProgClusterImplBase {
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
       final StreamObserver<GrpcUnregisterProjectResponse> responseObserver) {
     log.info("unregisterProject request");
-    log.debug(request.toString());
 
     final Single<GrpcUnregisterProjectResponse> responseSingle = worker.unregisterProject(request);
 
     responseSingle.subscribe(response -> {
       log.info("unregisterProject response");
-      log.debug(response.toString());
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();

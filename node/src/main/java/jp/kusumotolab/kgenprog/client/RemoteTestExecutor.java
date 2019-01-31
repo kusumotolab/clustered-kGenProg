@@ -82,14 +82,12 @@ public class RemoteTestExecutor implements TestExecutor {
         .build();
 
     log.debug("executeTest request");
-    log.debug(request.toString());
 
     return toSingle(futureStub.executeTest(request));
   }
 
   private TestResults deserializeResponse(final GrpcExecuteTestResponse response) {
     log.debug("executeTest response");
-    log.debug(response.toString());
 
     if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to executeTest");
@@ -122,11 +120,9 @@ public class RemoteTestExecutor implements TestExecutor {
         .setProject(zip)
         .build();
     log.debug("registerProject request");
-    log.debug(request.toString());
 
     final GrpcRegisterProjectResponse response = blockingStub.registerProject(request);
     log.debug("registerProject response");
-    log.debug(response.toString());
 
     if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to register project");
@@ -145,11 +141,9 @@ public class RemoteTestExecutor implements TestExecutor {
         .setProjectId(projectId.get())
         .build();
     log.debug("unregisterProject request");
-    log.debug(request.toString());
 
     final GrpcUnregisterProjectResponse response = blockingStub.unregisterProject(request);
     log.debug("unregisterProject response");
-    log.debug(response.toString());
 
     if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to unregister project");
