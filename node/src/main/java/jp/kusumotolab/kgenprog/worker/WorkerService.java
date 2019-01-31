@@ -52,6 +52,9 @@ public class WorkerService extends KGenProgClusterImplBase {
 
       responseObserver.onNext(response);
       responseObserver.onCompleted();
+
+      // EXP-FOR-FSE
+      System.exit(0);
       System.exit(0);
     }, e -> {
       log.error(e.toString());

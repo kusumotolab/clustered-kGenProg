@@ -121,6 +121,9 @@ public class Coordinator {
 
     responseObserver.onNext(response);
     responseObserver.onCompleted();
+
+    // EXP-FOR-FSE
+    System.exit(0);
   }
 
   public void registerWorker(final GrpcRegisterWorkerRequest request,

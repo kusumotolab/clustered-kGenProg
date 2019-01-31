@@ -86,6 +86,9 @@ public class WorkerSet {
           } catch (final RuntimeException e) {
             requestValidator.addInvalidateRequest(testRequest);
             coordinatorLogger.error(testRequest.getRequestId(), e);
+
+            // EXP-FOR-FSE
+            System.exit(0);
           }
         }, error -> {
           // workerとの通信が途絶えるとここに入る
