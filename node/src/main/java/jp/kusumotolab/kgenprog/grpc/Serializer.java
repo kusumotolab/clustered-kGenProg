@@ -314,7 +314,7 @@ public final class Serializer {
   public static Coverage deserialize(final GrpcCoverage coverage) {
     final FullyQualifiedName fqn = new TargetFullyQualifiedName(coverage.getExecutedTargetFQN());
     if (!coverage.getHasCovered()) {
-      return new CompressedCoverage(fqn, coverage.getSerializedSize());
+      return new CompressedCoverage(fqn, coverage.getStatusCount());
     }
     final List<Coverage.Status> statuses = coverage.getStatusList()
         .stream()
