@@ -8,8 +8,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.google.protobuf.ByteString;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -18,6 +16,7 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Completable;
 import io.reactivex.schedulers.Schedulers;
+import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcExecuteTestRequest;
@@ -35,29 +34,32 @@ import jp.kusumotolab.kgenprog.grpc.Worker;
 
 public class Coordinator {
 
-  private static final Logger log = LoggerFactory.getLogger(Coordinator.class);
+  private static final CoordinatorLogger coordinatorLogger =
+      CoordinatorLogger.getCoordinatorLogger();
 
   private final Server server;
-  private final AtomicInteger idCounter;
+  private final AtomicInteger projectIdCounter;
+  private final AtomicInteger workerIdCounter;
+  private final AtomicInteger testIdCounter;
   private final WorkerSet workerSet = new WorkerSet();
   private final List<ServerServiceDefinition> services = new ArrayList<>();
   private final ConcurrentMap<Integer, ByteString> binaryMap = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<Integer, GrpcConfiguration> configurationMap =
       new ConcurrentHashMap<>();
-  private final ClientHostAddressCaptor clientHostAddressCaptor = new ClientHostAddressCaptor();
+  private final CoordinatorInterceptor interceptor = new CoordinatorInterceptor();
 
   public Coordinator(final ClusterConfiguration config) {
     server = ServerBuilder.forPort(config.getPort())
-        .addService(
-            ServerInterceptors.intercept(new KGenProgCluster(this), clientHostAddressCaptor))
-        .addService(
-            ServerInterceptors.intercept(new CoordinatorService(this), clientHostAddressCaptor))
+        .addService(ServerInterceptors.intercept(new KGenProgCluster(this), interceptor))
+        .addService(ServerInterceptors.intercept(new CoordinatorService(this), interceptor))
         .maxInboundMessageSize(Integer.MAX_VALUE)
         .build();
 
     services.addAll(server.getServices());
 
-    idCounter = new AtomicInteger(0);
+    projectIdCounter = new AtomicInteger(0);
+    workerIdCounter = new AtomicInteger(0);
+    testIdCounter = new AtomicInteger(0);
   }
 
   public void start() throws IOException, InterruptedException {
@@ -74,10 +76,9 @@ public class Coordinator {
   // 以下，各Serviceから呼び出されるメソッド
   public void registerProject(final GrpcRegisterProjectRequest request,
       final StreamObserver<GrpcRegisterProjectResponse> responseObserver) {
-    log.info("registerProject request");
-    log.debug(request.toString());
+    final int requestId = interceptor.getRequestId();
+    final int projectId = projectIdCounter.getAndIncrement();
 
-    final int projectId = idCounter.getAndIncrement();
     binaryMap.put(projectId, request.getProject());
     configurationMap.put(projectId, request.getConfiguration());
     distributeAllWorker(projectId);
@@ -86,25 +87,28 @@ public class Coordinator {
         .setProjectId(projectId)
         .setStatus(GrpcStatus.SUCCESS)
         .build();
+
+    coordinatorLogger.registerProject(requestId, request, response);
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
-    log.info("registerProject response");
-    log.debug(response.toString());
   }
 
   public void executeTest(final GrpcExecuteTestRequest request,
       final StreamObserver<GrpcExecuteTestResponse> responseObserver) {
-    final String hostName = clientHostAddressCaptor.getHostName();
-    final int port = clientHostAddressCaptor.getPort();
-    workerSet.executeTest(new ExecuteTestRequest(request, responseObserver, hostName, port));
+    final int requestId = interceptor.getRequestId();
+    final int testId = testIdCounter.getAndIncrement();
+    final String hostName = interceptor.getHostName();
+    final int port = interceptor.getPort();
+    workerSet.executeTest(
+        new ExecuteTestRequest(request, responseObserver, hostName, port, requestId, testId));
   }
 
   public void unregisterProject(final GrpcUnregisterProjectRequest request,
       final StreamObserver<GrpcUnregisterProjectResponse> responseObserver) {
-    log.info("unregisterProject request");
-    log.debug(request.toString());
+    final int requestId = interceptor.getRequestId();
 
-    workerSet.unregister(request);
+    workerSet.unregister(requestId, request);
 
     binaryMap.remove(request.getProjectId());
     configurationMap.remove(request.getProjectId());
@@ -112,38 +116,36 @@ public class Coordinator {
     final GrpcUnregisterProjectResponse response = GrpcUnregisterProjectResponse.newBuilder()
         .setStatus(GrpcStatus.SUCCESS)
         .build();
+
+    coordinatorLogger.unregisterProject(requestId, response);
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
-    log.info("unregisterProject response");
-    log.debug(response.toString());
   }
 
   public void registerWorker(final GrpcRegisterWorkerRequest request,
       final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
-    log.info("registerWorker request");
-    log.debug(request.toString());
-    final String hostName = clientHostAddressCaptor.getHostName();
-    log.info("Client host name: " + hostName);
+    final int requestId = interceptor.getRequestId();
+    final int workerId = workerIdCounter.getAndIncrement();
+    final String hostName = interceptor.getHostName();
+    final int port = request.getPort();
 
-    final Worker remoteWorker = createWorker(hostName, request.getPort());
+    final Worker remoteWorker = createWorker(workerId, hostName, port);
     addWorker(remoteWorker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
         .setStatus(GrpcStatus.SUCCESS)
         .build();
+
+    coordinatorLogger.registerWorker(requestId, remoteWorker, response);
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
-
-    log.info("registerWorker response");
-    log.debug(response.toString());
-
   }
 
   public void getProject(final GrpcGetProjectRequest request,
       final StreamObserver<GrpcGetProjectResponse> responseObserver) {
-    log.info("getProject request");
-    log.debug(request.toString());
-
+    final int requestId = interceptor.getRequestId();
     final int projectId = request.getProjectId();
     final ByteString byteString = binaryMap.get(projectId);
     final GrpcConfiguration configuration = configurationMap.get(projectId);
@@ -159,10 +161,11 @@ public class Coordinator {
           .setStatus(GrpcStatus.SUCCESS)
           .build();
     }
+
+    coordinatorLogger.getProject(requestId, request, response);
+
     responseObserver.onNext(response);
     responseObserver.onCompleted();
-    log.info("getProject response");
-    log.debug(response.toString());
   }
 
   // 以下はテスト用メソッド
@@ -170,8 +173,8 @@ public class Coordinator {
     return services;
   }
 
-  protected Worker createWorker(final String name, final int port) {
-    return new RemoteWorker(name, port);
+  protected Worker createWorker(final int workerId, final String name, final int port) {
+    return new RemoteWorker(workerId, name, port);
   }
 
   protected void addWorker(final Worker worker) {

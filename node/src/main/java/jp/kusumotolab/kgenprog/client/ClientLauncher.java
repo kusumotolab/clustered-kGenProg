@@ -37,7 +37,7 @@ public class ClientLauncher {
   }
 
   public void launch(final ClientConfiguration clientConfig) {
-    Configuration config = clientConfig.getConfig();
+    final Configuration config = clientConfig.getConfig();
     setLogLevel(config.getLogLevel());
 
     final FaultLocalization faultLocalization = new Ochiai();
@@ -51,7 +51,8 @@ public class ClientLauncher {
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
-    final TestExecutor testExecutor = new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
+    final TestExecutor testExecutor =
+        new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
     final PatchGenerator patchGenerator = new PatchGenerator();
 
     final KGenProgMain kGenProgMain =
