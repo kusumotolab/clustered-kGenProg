@@ -54,6 +54,10 @@ public class RemoteTestExecutor implements TestExecutor {
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
     futureStub = KGenProgClusterGrpc.newFutureStub(managedChannel);
+
+    // EXP-FOR-FSE
+    Runtime.getRuntime()
+        .addShutdownHook(new Thread(this::finish));
   }
 
   public RemoteTestExecutor(final Configuration config, final ManagedChannel managedChannel) {
@@ -150,7 +154,6 @@ public class RemoteTestExecutor implements TestExecutor {
     }
     projectId = Optional.empty();
   }
-
 
   // 以下テスト用アクセッサ
 
