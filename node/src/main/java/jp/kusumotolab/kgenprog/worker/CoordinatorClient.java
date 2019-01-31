@@ -25,11 +25,9 @@ public class CoordinatorClient {
         .setPort(port)
         .build();
     log.info("registerWorker request");
-    log.debug(request.toString());
 
     final GrpcRegisterWorkerResponse response = blockingStub.registerWorker(request);
     log.info("registerWorker response");
-    log.debug(response.toString());
 
     return response;
   }
@@ -39,11 +37,9 @@ public class CoordinatorClient {
         .setProjectId(projectId)
         .build();
     log.info("getProject request");
-    log.debug(request.toString());
 
     final GrpcGetProjectResponse response = blockingStub.getProject(request);
     log.info("getProject response");
-    log.debug(response.toString());
 
     return response;
   }
