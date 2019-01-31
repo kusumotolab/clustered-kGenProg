@@ -9,11 +9,11 @@ public class RequestValidatorTest {
   public void testValidate() throws InterruptedException {
     final RequestValidator validator = new RequestValidator();
     final ExecuteTestRequest executeTestRequest1 = new ExecuteTestRequest(null, null, "localhost",
-        8080);
+        8080, 0, 0);
     final ExecuteTestRequest executeTestRequest2 = new ExecuteTestRequest(null, null, "localhost",
-        8080);
+        8080, 0, 0);
     final ExecuteTestRequest executeTestRequest3 = new ExecuteTestRequest(null, null, "localhost",
-        8080);
+        8080, 0, 0);
 
     assertThat(validator.validate(executeTestRequest1)).isTrue();
 
@@ -23,7 +23,7 @@ public class RequestValidatorTest {
 
     Thread.sleep(1);
     final ExecuteTestRequest executeTestRequest4 = new ExecuteTestRequest(null, null, "localhost",
-        8080);
+        8080, 0, 0);
     assertThat(validator.validate(executeTestRequest4)).isTrue();
   }
 }

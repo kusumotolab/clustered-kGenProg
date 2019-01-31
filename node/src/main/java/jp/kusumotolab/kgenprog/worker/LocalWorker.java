@@ -27,8 +27,10 @@ public class LocalWorker implements Worker {
   private final ConcurrentMap<Integer, Project> projectMap;
   private final Path workdir;
   private final CoordinatorClient coordinatorClient;
+  private final int workerId;
 
-  public LocalWorker(final Path workdir, final CoordinatorClient coordinatorClient) {
+  public LocalWorker(final int workerId, final Path workdir, final CoordinatorClient coordinatorClient) {
+    this.workerId = workerId;
     this.workdir = workdir;
     this.coordinatorClient = coordinatorClient;
     projectMap = new ConcurrentHashMap<>();
@@ -101,5 +103,15 @@ public class LocalWorker implements Worker {
   protected Project createProject(final GrpcGetProjectResponse response, final int projectId)
       throws IOException {
     return new Project(workdir, response, projectId);
+  }
+
+  @Override
+  public int getId() {
+    return workerId;
+  }
+
+  @Override
+  public String getName() {
+    return "LocalWorker";
   }
 }

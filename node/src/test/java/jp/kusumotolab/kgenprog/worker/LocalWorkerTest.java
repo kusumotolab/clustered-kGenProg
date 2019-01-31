@@ -77,7 +77,7 @@ public class LocalWorkerTest {
 
     // LocalWorkerの作成
     final CoordinatorClient coordinatorClient = spy(new CoordinatorClient(managedChannel));
-    final LocalWorker worker = spy(new LocalWorker(path, coordinatorClient));
+    final LocalWorker worker = spy(new LocalWorker(0, path, coordinatorClient));
     doReturn(project).when(worker)
         .createProject(any(), anyInt());
     final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
@@ -102,7 +102,7 @@ public class LocalWorkerTest {
     // Workerの作成
     final Project project = mock(Project.class);
     final CoordinatorClient coordinatorClient = spy(new CoordinatorClient(managedChannel));
-    final LocalWorker worker = spy(new LocalWorker(path, coordinatorClient));
+    final LocalWorker worker = spy(new LocalWorker(0, path, coordinatorClient));
     final GrpcGetProjectResponse response = GrpcGetProjectResponse.newBuilder()
         .build();
     doReturn(project).when(worker)

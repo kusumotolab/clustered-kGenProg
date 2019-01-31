@@ -4,7 +4,7 @@ import io.reactivex.Single;
 
 /**
  * クラスタでのワーカー．コーディネータからの依頼を受け，テストを実行する．
- * 
+ *
  * @author Ryo Arima
  *
  */
@@ -12,7 +12,7 @@ public interface Worker {
 
   /**
    * テストを実行しその結果を返す
-   * 
+   *
    * @param request リクエスト
    * @return レスポンス
    */
@@ -20,7 +20,7 @@ public interface Worker {
 
   /**
    * ワーカーからプロジェクトの登録を解除する
-   * 
+   *
    * @param request リクエスト
    * @return レスポンス
    */
@@ -29,5 +29,9 @@ public interface Worker {
   /**
    * そのワーカーが終了したことを通知するメソッド
    */
-  default void finish() { }
+  default void finish() {}
+
+  int getId();
+
+  String getName();
 }
