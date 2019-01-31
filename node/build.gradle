@@ -42,12 +42,10 @@ dependencies {
     compile group: 'io.grpc', name: 'grpc-netty-shaded', version: grpcVersion
     compile group: 'io.grpc', name: 'grpc-protobuf', version: grpcVersion
     compile group: 'io.grpc', name: 'grpc-stub', version: grpcVersion
-    
-    
+
     // https://mvnrepository.com/artifact/net.logstash.logback/logstash-logback-encoder
 	compile group: 'net.logstash.logback', name: 'logstash-logback-encoder', version: '5.2'
-    
-    
+
     // https://mvnrepository.com/artifact/org.assertj/assertj-core
     testCompile group: 'org.assertj', name: 'assertj-core', version: '3.10.0'
 

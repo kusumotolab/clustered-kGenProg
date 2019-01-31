@@ -24,7 +24,7 @@ public class Events {
   public static final Events events = new Events();
 
   static {
-    events.eventObservable.subscribe(doc -> {
+    events.getEventObservable().subscribe(doc -> {
       final JsonObject object = new JsonObject();
       object.addProperty("type", doc.getType());
       object.add(doc.getType(), gson.toJsonTree(doc));
@@ -32,9 +32,9 @@ public class Events {
     });
   }
 
-  Subject<EventBucket> eventSubject;
-  ExecutorService executor;
-  Observable<EventDocument> eventObservable;
+  private final Subject<EventBucket> eventSubject;
+  private final ExecutorService executor;
+  private final Observable<EventDocument> eventObservable;
 
   private Events() {
     eventSubject = PublishSubject.<EventBucket>create()

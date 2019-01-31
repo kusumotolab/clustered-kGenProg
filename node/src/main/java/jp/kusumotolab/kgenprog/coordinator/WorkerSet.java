@@ -44,7 +44,7 @@ public class WorkerSet {
       return nullObject;
     })
         .subscribe(o -> {
-        }, error -> coordinatorLogger.error(-1, error));
+        }, error ->  coordinatorLogger.error(-1, error));
   }
 
   public void addWorker(final Worker worker) {

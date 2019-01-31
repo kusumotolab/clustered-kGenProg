@@ -22,7 +22,7 @@ public class RemoteWorker implements Worker {
 
   public RemoteWorker(final int workerId, final String name, final int port) {
     this.workerId = workerId;
-    this.workerName = name + port;
+    this.workerName = name + ":" + port;
     managedChannel = ManagedChannelBuilder.forAddress(name, port)
         .usePlaintext()
         .keepAliveTime(ClusterConfiguration.DEFAULT_KEEPALIVE_SECONDS, TimeUnit.SECONDS)
