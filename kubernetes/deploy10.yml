@@ -1,0 +1,84 @@
+# Coordinator を配置するマニフェスト
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c-kgp-coordinator
+spec:
+  strategy:
+    type: Recreate
+  minReadySeconds: 3
+  replicas: 1
+  selector:
+    matchLabels:
+      app: c-kgp-coordinator
+  template:
+    metadata:
+      labels:
+        app: c-kgp-coordinator
+    spec:
+      imagePullSecrets: # Docker Hub 上の *private な* イメージを利用するのに必要
+        - name: regcred # c.f. https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+      containers:
+        - name: c-kgp-coordinator-container
+          image: kusumotolab/clustered-kgenprog:exp-for-fse
+          imagePullPolicy: Always
+          command: ["/home/kgenprog/bin/kGenProg-coordinator"]
+          args: ["--port", "50051", "--log-destination", "172.17.100.14:4560"]
+          ports:
+            - containerPort: 50051
+          resources:
+            requests:
+              memory: 16384Mi
+              cpu: 2000m
+
+---
+# Coordinator にアクセスするためのエンドポイントを作成するマニフェスト
+apiVersion: v1
+kind: Service
+metadata:
+  name: c-kgp-coordinator-nodeport
+spec:
+  type: NodePort
+  ports:
+    - name: "http-port"
+      protocol: "TCP"
+      port: 50051
+      targetPort: 50051
+      nodePort: 30090 # k8s 環境の外からアクセスしてくるためのポート
+                      # k8s 環境全体でユニークにしておくこと
+  selector:
+    app: c-kgp-coordinator
+
+---
+# Worker を配置するマニフェスト
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: c-kgp-workers
+spec:
+  strategy:
+    type: Recreate
+  minReadySeconds: 3
+  replicas: 1 # Worker の数を指定
+  selector:
+    matchLabels:
+      app: c-kgp-workers
+  template:
+    metadata:
+      labels:
+        app: c-kgp-workers
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: c-kgp-worker-container
+          image: kusumotolab/clustered-kgenprog:exp-for-fse
+          imagePullPolicy: Always
+          command: ["/home/kgenprog/bin/kGenProg-worker"]
+          args: ["--host", "c-kgp-coordinator-nodeport", "--port", "50051"]
+          ports:
+            - containerPort: 50051
+          resources:
+            requests:
+              memory: 2048Mi  # Worker を起動する各コンテナのスペックを指定
+              cpu: 1000m

@@ -44,7 +44,7 @@ spec:
       protocol: "TCP"
       port: 50051
       targetPort: 50051
-      nodePort: 30081 # k8s 環境の外からアクセスしてくるためのポート
+      nodePort: 30085 # k8s 環境の外からアクセスしてくるためのポート
                       # k8s 環境全体でユニークにしておくこと
   selector:
     app: c-kgp-coordinator
@@ -59,7 +59,7 @@ spec:
   strategy:
     type: Recreate
   minReadySeconds: 3
-  replicas: 4 # Worker の数を指定
+  replicas: 1 # Worker の数を指定
   selector:
     matchLabels:
       app: c-kgp-workers
