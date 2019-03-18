@@ -1,15 +1,6 @@
 #!/usr/bin/env bash
 
-# 引数があればそれを，なければdefaultを(実験用)
-if [[ -z $1 ]]; then
-  NAMESPACE="default"
-  DEPLOY_FILE="deploy.yml"
-else
-  ID=$1
-  NAMESPACE="seed-"$ID
-  DEPLOY_FILE="deploy"$ID".yml"
-fi
-
+NAMESPACE="4-workers"
 WATCH_INTERVAL_SEC=5
 
 SCRIPT_DIR="$(cd $(dirname "${BASH_SOURCE:-$0}"); pwd)"
@@ -21,6 +12,7 @@ source ${SCRIPT_DIR}/lib/shell-logger.sh
 # LOGGER_INFO_COLOR=36
 LOGGER_SHOW_FILE=0
 LOGGER_ERROR_TRACE=0
+
 
 if [[ ! $(kubectl --namespace $NAMESPACE get pods 2> /dev/null | grep c-kgp-coordinator) = '' ]]; then
   error "Coordinator seems to be already running in this namespace.
@@ -34,7 +26,7 @@ while :
 do
 
   notice '(Re-)Creating clustered-kGenProg services on Kubernetes ...'
-  kubectl --namespace $NAMESPACE apply -f ${SCRIPT_DIR}/${DEPLOY_FILE}
+  kubectl --namespace $NAMESPACE apply -f ${SCRIPT_DIR}/deploy-4.yml
   if [[ $? -eq 0 ]]; then
     notice 'Services successfully created.'
   else
@@ -56,7 +48,7 @@ do
     if [[ $COORDINATOR_RESTARTS -ge '1' ]]; then
       warn 'Coordinator seems to have crashed!'
       notice 'Deleting existing services ...'
-      kubectl --namespace $NAMESPACE delete -f ${SCRIPT_DIR}/${DEPLOY_FILE}
+      kubectl --namespace $NAMESPACE delete -f ${SCRIPT_DIR}/deploy-4.yml
       if [[ $? -eq 0 ]]; then
         notice 'Services successfully deleted.'
         break
