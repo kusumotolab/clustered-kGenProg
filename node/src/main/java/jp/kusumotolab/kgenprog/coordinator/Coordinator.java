@@ -15,6 +15,8 @@ import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
 import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Single;
 import io.reactivex.schedulers.Schedulers;
 import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
@@ -134,13 +136,36 @@ public class Coordinator {
     final int port = request.getPort();
 
     final Worker remoteWorker = createWorker(workerId, hostName, port);
-    addWorker(remoteWorker);
+    Flowable<GrpcExecuteTestResponse> flowable = null;
+    for (final Integer projectId : binaryMap.keySet()) {
+      final GrpcExecuteTestRequest testRequest = GrpcExecuteTestRequest.newBuilder()
+          .setProjectId(projectId)
+          .build();
+
+      final Single<GrpcExecuteTestResponse> responseSingle = remoteWorker.executeTest(
+          testRequest);
+      if (flowable == null) {
+        flowable = responseSingle.toFlowable();
+      } else {
+        flowable = flowable.concatWith(responseSingle);
+      }
+    }
+
+    if (flowable == null) {
+      finishRegistering(requestId, remoteWorker, responseObserver);
+    } else {
+      flowable.subscribe(e -> finishRegistering(requestId, remoteWorker, responseObserver));
+    }
+  }
+
+  private void finishRegistering(final int requestId, final Worker worker, final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
+    addWorker(worker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
         .setStatus(GrpcStatus.SUCCESS)
         .build();
 
-    coordinatorLogger.registerWorker(requestId, remoteWorker, response);
+    coordinatorLogger.registerWorker(requestId, worker, response);
 
     responseObserver.onNext(response);
     responseObserver.onCompleted();
