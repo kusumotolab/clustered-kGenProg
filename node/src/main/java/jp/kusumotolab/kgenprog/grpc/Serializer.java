@@ -285,7 +285,7 @@ public final class Serializer {
 
   public static TestResults deserialize(final Path rootPath, final GrpcTestResults results) {
     if (results.getEmpty()) {
-      return EmptyTestResults.instance;
+      return new EmptyTestResults();
     }
 
     final TestResultsWithMap testResults = new TestResultsWithMap();

@@ -70,7 +70,7 @@ public class RemoteTestExecutor implements TestExecutor {
   public Single<TestResults> execAsync(final Single<Variant> variantSingle) {
     if (!projectId.isPresent()) {
       log.error("project id is not present");
-      return Single.just(EmptyTestResults.instance);
+      return Single.just(new EmptyTestResults());
     }
 
     final Single<TestResults> testResultsSingle = variantSingle.flatMap(this::requestExecutingTest)
@@ -95,7 +95,7 @@ public class RemoteTestExecutor implements TestExecutor {
 
     if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to executeTest");
-      return EmptyTestResults.instance;
+      return new EmptyTestResults();
     }
 
     final Path rootPath = config.getTargetProject().rootPath;
