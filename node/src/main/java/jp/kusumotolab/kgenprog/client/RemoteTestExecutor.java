@@ -99,7 +99,10 @@ public class RemoteTestExecutor implements TestExecutor {
     }
 
     final Path rootPath = config.getTargetProject().rootPath;
-    return Serializer.deserialize(rootPath, response.getTestResults());
+    // EXP-FOR-FSE
+    final TestResults testResults = Serializer.deserialize(rootPath, response.getTestResults());
+    testResults.buildTime = response.getBuildTime();
+    return testResults;
   }
 
   @Override
