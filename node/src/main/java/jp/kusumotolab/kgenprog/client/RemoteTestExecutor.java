@@ -54,10 +54,6 @@ public class RemoteTestExecutor implements TestExecutor {
         .build();
     blockingStub = KGenProgClusterGrpc.newBlockingStub(managedChannel);
     futureStub = KGenProgClusterGrpc.newFutureStub(managedChannel);
-
-    // EXP-FOR-FSE
-    Runtime.getRuntime()
-        .addShutdownHook(new Thread(this::finish));
   }
 
   public RemoteTestExecutor(final Configuration config, final ManagedChannel managedChannel) {
@@ -70,7 +66,7 @@ public class RemoteTestExecutor implements TestExecutor {
   public Single<TestResults> execAsync(final Single<Variant> variantSingle) {
     if (!projectId.isPresent()) {
       log.error("project id is not present");
-      return Single.just(new EmptyTestResults());
+      return Single.just(EmptyTestResults.instance);
     }
 
     final Single<TestResults> testResultsSingle = variantSingle.flatMap(this::requestExecutingTest)
@@ -95,14 +91,11 @@ public class RemoteTestExecutor implements TestExecutor {
 
     if (response.getStatus() == GrpcStatus.FAILED) {
       log.error("failed to executeTest");
-      return new EmptyTestResults();
+      return EmptyTestResults.instance;
     }
 
     final Path rootPath = config.getTargetProject().rootPath;
-    // EXP-FOR-FSE
-    final TestResults testResults = Serializer.deserialize(rootPath, response.getTestResults());
-    testResults.buildTime = response.getBuildTime();
-    return testResults;
+    return Serializer.deserialize(rootPath, response.getTestResults());
   }
 
   @Override
@@ -157,6 +150,7 @@ public class RemoteTestExecutor implements TestExecutor {
     }
     projectId = Optional.empty();
   }
+
 
   // 以下テスト用アクセッサ
 

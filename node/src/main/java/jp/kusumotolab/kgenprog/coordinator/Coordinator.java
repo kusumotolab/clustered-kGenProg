@@ -123,9 +123,6 @@ public class Coordinator {
 
     responseObserver.onNext(response);
     responseObserver.onCompleted();
-
-    // EXP-FOR-FSE
-    System.exit(0);
   }
 
   public void registerWorker(final GrpcRegisterWorkerRequest request,
@@ -135,6 +132,8 @@ public class Coordinator {
     final String hostName = interceptor.getHostName();
     final int port = request.getPort();
 
+    // Workerに抱えているプロジェクトをを全て送る
+    // TODO: リファクリングする
     final Worker remoteWorker = createWorker(workerId, hostName, port);
     Flowable<GrpcExecuteTestResponse> flowable = null;
     for (final Integer projectId : binaryMap.keySet()) {

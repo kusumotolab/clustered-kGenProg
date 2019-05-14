@@ -186,12 +186,6 @@ message GrpcExecuteTestResponse {
    * テスト実行結果
    */
   GrpcTestResults testResults = 2;
-
-  /*
-   * ビルドにかかった時間 (EXP-FOR-FSE)
-   */
-  double buildTime = 3;
-
 }
 
 message GrpcTestResults {

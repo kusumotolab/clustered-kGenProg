@@ -20,10 +20,10 @@ spec:
         - name: regcred # c.f. https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
       containers:
         - name: c-kgp-coordinator-container
-          image: kusumotolab/clustered-kgenprog:exp-for-fse
+          image: kusumotolab/clustered-kgenprog:latest
           imagePullPolicy: Always
           command: ["/home/kgenprog/bin/kGenProg-coordinator"]
-          args: ["--port", "50051", "--log-destination", "172.17.100.14:4560"]
+          args: ["--port", "50051"]
           ports:
             - containerPort: 50051
           resources:
@@ -59,7 +59,7 @@ spec:
   strategy:
     type: Recreate
   minReadySeconds: 3
-  replicas: 1 # Worker の数を指定
+  replicas: 4 # Worker の数を指定
   selector:
     matchLabels:
       app: c-kgp-workers
@@ -72,7 +72,7 @@ spec:
         - name: regcred
       containers:
         - name: c-kgp-worker-container
-          image: kusumotolab/clustered-kgenprog:exp-for-fse
+          image: kusumotolab/clustered-kgenprog:latest
           imagePullPolicy: Always
           command: ["/home/kgenprog/bin/kGenProg-worker"]
           args: ["--host", "c-kgp-coordinator-nodeport", "--port", "50051"]

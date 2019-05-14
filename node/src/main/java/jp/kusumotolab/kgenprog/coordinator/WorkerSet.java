@@ -74,18 +74,9 @@ public class WorkerSet {
 
     workerSetLogger.startExecuteTest(testRequest, testReuquestId, worker);
 
-    // EXP-FOR-FSE
-    final long startTime = System.currentTimeMillis();
-
     final Single<GrpcExecuteTestResponse> responseSingle = worker.executeTest(request);
     responseSingle.subscribeOn(Schedulers.from(getExecutorService()))
-        .subscribe(workerResponse -> {
-          // EXP-FOR-FSE
-          final long endTime = System.currentTimeMillis();
-          final GrpcExecuteTestResponse response = GrpcExecuteTestResponse.newBuilder(workerResponse)
-              .setBuildTime(endTime - startTime)
-              .build();
-
+        .subscribe(response -> {
           workerSubject.onNext(worker);
           workerSetLogger.finishExecuteTest(testRequest, testReuquestId, worker, response);
 
@@ -95,9 +86,6 @@ public class WorkerSet {
           } catch (final RuntimeException e) {
             requestValidator.addInvalidateRequest(testRequest);
             coordinatorLogger.error(testRequest.getRequestId(), e);
-
-            // EXP-FOR-FSE
-            System.exit(0);
           }
         }, error -> {
           // workerとの通信が途絶えるとここに入る
