@@ -17,10 +17,12 @@ import com.electronwill.nightconfig.core.file.FileConfig;
 public class ClusterConfiguration {
 
   public static final int DEFAULT_PORT = 50051;
-  public static final int DEFAULT_KEEPALIVE_SECONDS = 60;
+  public static final int DEFAULT_KEEPALIVE_SECONDS = Integer.MAX_VALUE;
+  public static final String DEFAULT_LOG_DESTINATION = "localhost:4560";
 
   private final Path workingDir;
   private final int port;
+  private final String logDestination;
 
   private ClusterConfiguration(final Builder builder) {
     if (builder.workingDir == null) {
@@ -36,6 +38,7 @@ public class ClusterConfiguration {
     }
 
     port = builder.port;
+    logDestination = builder.logDestination;
   }
 
   public Path getWorkingDir() {
@@ -44,6 +47,10 @@ public class ClusterConfiguration {
 
   public int getPort() {
     return port;
+  }
+
+  public String getLogDestination() {
+    return logDestination;
   }
 
   public static class Builder {
@@ -58,6 +65,10 @@ public class ClusterConfiguration {
     @com.electronwill.nightconfig.core.conversion.Path("port")
     @PreserveNotNull
     private int port = DEFAULT_PORT;
+
+    @com.electronwill.nightconfig.core.conversion.Path("log-destination")
+    @PreserveNotNull
+    private String logDestination = DEFAULT_LOG_DESTINATION;
 
 
     public static ClusterConfiguration buildFromCmdLineArgs(final String[] args) {
@@ -137,6 +148,13 @@ public class ClusterConfiguration {
     private void setPortNumberFromCmdLineParser(final int port) {
       this.port = port;
     }
+
+    @Option(name = "--log-destination", metaVar = "<host>",
+        usage = "Destination host of log monitoring.")
+    private void setLogDestinationFromCmdLineParser(final String logDestination) {
+      this.logDestination = logDestination;
+    }
+
   }
 
 }

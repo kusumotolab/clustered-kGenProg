@@ -239,6 +239,16 @@ message GrpcCoverage {
    * 各行のStatus
    */
   repeated Status status = 2;
+
+  /*
+   * COVEREDを含んでいるか(通信サイズ圧縮用)
+   */
+  bool hasCovered = 3;
+
+  /*
+   * Statusのサイズ(通信サイズ圧縮用)
+   */
+  int32 setStatusSize = 4;
 }
 
 message GrpcBuildResults {

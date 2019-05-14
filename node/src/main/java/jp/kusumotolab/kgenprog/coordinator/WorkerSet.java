@@ -1,5 +1,7 @@
 package jp.kusumotolab.kgenprog.coordinator;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -104,6 +106,10 @@ public class WorkerSet {
           .subscribe(r -> {
           }, e -> coordinatorLogger.error(requestId, e));
     }
+  }
+
+  public Collection<Worker> getAllWorker() {
+    return workerMap.values();
   }
 
   // テストのために切り出し

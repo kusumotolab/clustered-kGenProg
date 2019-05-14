@@ -2,16 +2,22 @@ package jp.kusumotolab.kgenprog.coordinator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import com.google.protobuf.ByteString;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.stub.StreamObserver;
+import io.reactivex.Completable;
+import io.reactivex.Flowable;
+import io.reactivex.Single;
+import io.reactivex.schedulers.Schedulers;
 import jp.kusumotolab.kgenprog.coordinator.log.CoordinatorLogger;
 import jp.kusumotolab.kgenprog.grpc.ClusterConfiguration;
 import jp.kusumotolab.kgenprog.grpc.GrpcConfiguration;
@@ -77,6 +83,7 @@ public class Coordinator {
 
     binaryMap.put(projectId, request.getProject());
     configurationMap.put(projectId, request.getConfiguration());
+    distributeAllWorker(projectId);
 
     final GrpcRegisterProjectResponse response = GrpcRegisterProjectResponse.newBuilder()
         .setProjectId(projectId)
@@ -125,14 +132,39 @@ public class Coordinator {
     final String hostName = interceptor.getHostName();
     final int port = request.getPort();
 
+    // Workerに抱えているプロジェクトをを全て送る
+    // TODO: リファクリングする
     final Worker remoteWorker = createWorker(workerId, hostName, port);
-    addWorker(remoteWorker);
+    Flowable<GrpcExecuteTestResponse> flowable = null;
+    for (final Integer projectId : binaryMap.keySet()) {
+      final GrpcExecuteTestRequest testRequest = GrpcExecuteTestRequest.newBuilder()
+          .setProjectId(projectId)
+          .build();
+
+      final Single<GrpcExecuteTestResponse> responseSingle = remoteWorker.executeTest(
+          testRequest);
+      if (flowable == null) {
+        flowable = responseSingle.toFlowable();
+      } else {
+        flowable = flowable.concatWith(responseSingle);
+      }
+    }
+
+    if (flowable == null) {
+      finishRegistering(requestId, remoteWorker, responseObserver);
+    } else {
+      flowable.subscribe(e -> finishRegistering(requestId, remoteWorker, responseObserver));
+    }
+  }
+
+  private void finishRegistering(final int requestId, final Worker worker, final StreamObserver<GrpcRegisterWorkerResponse> responseObserver) {
+    addWorker(worker);
 
     final GrpcRegisterWorkerResponse response = GrpcRegisterWorkerResponse.newBuilder()
         .setStatus(GrpcStatus.SUCCESS)
         .build();
 
-    coordinatorLogger.registerWorker(requestId, remoteWorker, response);
+    coordinatorLogger.registerWorker(requestId, worker, response);
 
     responseObserver.onNext(response);
     responseObserver.onCompleted();
@@ -163,7 +195,6 @@ public class Coordinator {
     responseObserver.onCompleted();
   }
 
-
   // 以下はテスト用メソッド
   protected List<ServerServiceDefinition> getServices() {
     return services;
@@ -174,6 +205,27 @@ public class Coordinator {
   }
 
   protected void addWorker(final Worker worker) {
+    for (final Integer projectId : binaryMap.keySet()) {
+      final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+          .setProjectId(projectId)
+          .build();
+      worker.executeTest(request)
+          .blockingGet();
+    }
     workerSet.addWorker(worker);
+  }
+
+  private void distributeAllWorker(final int projectId) {
+    final Collection<Worker> allWorker = workerSet.getAllWorker();
+    final GrpcExecuteTestRequest request = GrpcExecuteTestRequest.newBuilder()
+        .setProjectId(projectId)
+        .build();
+    final List<Completable> completableList = allWorker.stream()
+        .map(e -> e.executeTest(request)
+            .subscribeOn(Schedulers.from(workerSet.getExecutorService())))
+        .map(Completable::fromSingle)
+        .collect(Collectors.toList());
+    Completable.merge(completableList)
+        .blockingGet();
   }
 }

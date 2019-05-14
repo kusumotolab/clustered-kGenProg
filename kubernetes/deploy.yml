@@ -28,8 +28,8 @@ spec:
             - containerPort: 50051
           resources:
             requests:
-              memory: 2048Mi  # Coordinator を起動するコンテナのスペックを指定
-              cpu: 1500m
+              memory: 16384Mi
+              cpu: 2000m
 
 ---
 # Coordinator にアクセスするためのエンドポイントを作成するマニフェスト
@@ -59,7 +59,7 @@ spec:
   strategy:
     type: Recreate
   minReadySeconds: 3
-  replicas: 5 # Worker の数を指定
+  replicas: 4 # Worker の数を指定
   selector:
     matchLabels:
       app: c-kgp-workers
