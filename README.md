@@ -7,10 +7,10 @@ kGenProg with cluster computing
 ## How to build
 
 ```
-git clone https://github.com/kusumotolab/clustered-kGenProg.git
-cd clustered-kGenProg
-git submodule update --init
-./gradlew installDist
+$ git clone git@github.com:kusumotolab/clustered-kGenProg.git
+$ cd clustered-kGenProg
+$ git submodule update --init
+$ ./gradlew installDist
 ```
 
 ## How to use manually
@@ -19,21 +19,21 @@ Please execute each command on each machine.
 ### Run Coordinator
 
 ```
-./node/build/install/node/bin/kGenProg-coordinator \
+$ ./node/build/install/node/bin/kGenProg-coordinator \
   --port 50051
 ```
 
 ### Run Worker (As many as you want)
 
 ```
-./node/build/install/node/bin/kGenProg-worker \
+$ ./node/build/install/node/bin/kGenProg-worker \
   --host <Coordinator's Host> --port 50051
 ```
 
 ## Run Client with kGenProg
 
 ```
-./node/build/install/node/bin/kGenProg-client \
+$ ./node/build/install/node/bin/kGenProg-client \
   --host <Coordinator's Host> --port 50051 \
   --kgp-args '--config main/example/CloseToZero01/kgenprog.toml'
 ```
