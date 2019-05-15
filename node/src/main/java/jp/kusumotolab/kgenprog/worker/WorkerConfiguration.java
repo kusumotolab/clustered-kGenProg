@@ -94,7 +94,7 @@ public class WorkerConfiguration {
     @Option(name = "--worker-port", metaVar = "<port>",
         usage = "Port number where worker is listening.")
     private void setWorkerPortNumberFromCmdLineParser(final Integer port) {
-      this.workerPort = workerPort;
+      this.workerPort = port;
     }
   }
 
