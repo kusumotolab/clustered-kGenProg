@@ -1,5 +1,7 @@
 package jp.kusumotolab.kgenprog.worker;
 
+import java.io.IOException;
+import java.net.Socket;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
@@ -12,11 +14,13 @@ public class WorkerConfiguration {
 
   private final String host;
   private final int port;
+  private Integer workerPort;
 
   protected WorkerConfiguration(
       final WorkerConfiguration.Builder builder) {
     this.host = builder.host;
     this.port = builder.port;
+    this.workerPort = builder.workerPort;
   }
 
   public String getHost() {
@@ -27,10 +31,30 @@ public class WorkerConfiguration {
     return port;
   }
 
+  public int getWorkerPort() {
+    if (workerPort != null) {
+      return workerPort;
+    }
+    workerPort = getFreePort();
+    return workerPort;
+  }
+
+  private int getFreePort() {
+    final int port;
+    try (Socket socket = new Socket()) {
+      socket.bind(null);
+      port = socket.getLocalPort();
+    } catch (final IOException e) {
+      throw new RuntimeException(e);
+    }
+    return port;
+  }
+
   public static class Builder {
 
     private String host = DEFAULT_HOST;
     private int port = DEFAULT_PORT;
+    private Integer workerPort = null;
 
     private Builder() {
     }
@@ -63,8 +87,14 @@ public class WorkerConfiguration {
 
     @Option(name = "--port", metaVar = "<port>",
         usage = "Port number where coordinator is listening.")
-    private void setWorkerPortNumberFromCmdLineParser(final int port) {
+    private void setCoordinatorPortNumberFromCmdLineParser(final int port) {
       this.port = port;
+    }
+
+    @Option(name = "--worker-port", metaVar = "<port>",
+        usage = "Port number where worker is listening.")
+    private void setWorkerPortNumberFromCmdLineParser(final Integer port) {
+      this.workerPort = workerPort;
     }
   }
 

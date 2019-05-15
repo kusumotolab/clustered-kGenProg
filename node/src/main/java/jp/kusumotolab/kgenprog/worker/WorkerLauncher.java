@@ -1,7 +1,6 @@
 package jp.kusumotolab.kgenprog.worker;
 
 import java.io.IOException;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,7 +31,7 @@ public class WorkerLauncher {
             .build();
 
     final CoordinatorClient coordinatorClient = new CoordinatorClient(managedChannel);
-    final int freePort = getFreePort();
+    final int freePort = configuration.getWorkerPort();
 
     final Path path = Paths.get("worker-" + freePort);
     try {
@@ -55,16 +54,5 @@ public class WorkerLauncher {
     } catch (final IOException | InterruptedException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private int getFreePort() {
-    final int port;
-    try (Socket socket = new Socket()) {
-      socket.bind(null);
-      port = socket.getLocalPort();
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-    return port;
   }
 }
