@@ -4,6 +4,10 @@
 
 kGenProg with cluster computing
 
+## Requirements
+- JDK8
+- Kubernetes (Option)
+
 ## How to build
 
 ```
@@ -15,7 +19,7 @@ $ ./gradlew installDist
 
 ## How to use manually
 Please execute each command on each machine.  
-(If you want to try the tool quickly, while you can execute each command on the same machine, the loads are not dispersed)
+(If you want to try the tool quickly, while you can execute each command on the same machine, the loads are not dispersed.)
 ### Run Coordinator
 
 ```
