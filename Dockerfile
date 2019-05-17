@@ -10,7 +10,7 @@ RUN ./gradlew installDist
 FROM openjdk:8u181-jdk-alpine3.8
 
 LABEL description="Executes clustered-kGenProg."
-LABEL maintainer="Hiroyuki Matsuo <h.matsuo.engineer@gmail.com>"
+LABEL maintainer="Junnosuke Matsumoto <j-matumt@ist.osaka-u.ac.jp>"
 
 RUN adduser -S kgenprog
 USER kgenprog
