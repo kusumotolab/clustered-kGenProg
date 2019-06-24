@@ -205,7 +205,7 @@ public final class Serializer {
     if (buildResults.getClass() == EmptyBuildResults.class) {
       builder.putAllSourcePathToFQN(Collections.emptyMap());
     } else {
-      final Map<String, GrpcFullyQualifiedNames> map = buildResults.getBinaryStore()
+      final Map<String, GrpcFullyQualifiedNames> map = buildResults.binaryStore
           .getAll()
           .stream()
           .collect(Collectors.groupingBy(v -> v.getOriginPath().path.toString(),

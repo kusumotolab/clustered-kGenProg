@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Random;
 import jp.kusumotolab.kgenprog.Configuration;
 import jp.kusumotolab.kgenprog.Strategies;
 import jp.kusumotolab.kgenprog.fl.FaultLocalization;
@@ -124,7 +125,7 @@ public class Project {
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
     final TestExecutor testExecutor = new LocalTestExecutor(configuration);
     final VariantSelection variantSelection =
-        new GenerationalVariantSelection(configuration.getHeadcount());
+        new GenerationalVariantSelection(configuration.getHeadcount(), new Random(0));
     return new Strategies(faultLocaliztion, astConstruction, sourceCodeGeneration,
         sourceCodeValidation, testExecutor, variantSelection);
   }

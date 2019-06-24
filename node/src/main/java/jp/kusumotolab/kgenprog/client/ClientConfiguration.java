@@ -15,9 +15,8 @@ import jp.kusumotolab.kgenprog.Configuration;
  * --kgp-args '--config "/path/containing/space/kGenProg settings.toml"'
  *                                                      ^ Cannot use spaces!
  * </pre>
- * 
- * @author h-matsuo
  *
+ * @author h-matsuo
  */
 public class ClientConfiguration {
 
@@ -37,23 +36,24 @@ public class ClientConfiguration {
   public Configuration getConfig() {
     return config;
   }
-  
+
   public String getHost() {
-	  return host;
+    return host;
   }
-  
+
   public int getPort() {
-	  return port;
+    return port;
   }
 
   public static class Builder {
-    
-    private Configuration config;    
+
+    private Configuration config;
     private String host = DEFAULT_HOST;
     private int port = DEFAULT_PORT;
     private String[] kgpArgs;
 
-    private Builder() {}
+    private Builder() {
+    }
 
     public static ClientConfiguration buildFromCmdLineArgs(final String[] args)
         throws IllegalArgumentException {
@@ -63,7 +63,9 @@ public class ClientConfiguration {
 
       try {
         parser.parseArgument(args);
-        builder.config = Configuration.Builder.buildFromCmdLineArgs(builder.kgpArgs);
+        builder.config = Configuration.Builder.createFromCmdLineArgs(builder.kgpArgs)
+            .setNeedHistoricalElement(false)
+            .build();
       } catch (final CmdLineException | IllegalArgumentException | InvalidValueException e) {
         // todo: make error message of InvalidValueException more user-friendly
         parser.printUsage(System.err);
@@ -76,26 +78,26 @@ public class ClientConfiguration {
     public ClientConfiguration build() {
       return new ClientConfiguration(this);
     }
-    
+
     @Option(name = "--host", metaVar = "<host>",
         usage = "Host where coordinator is running.")
     private void setHostFromCmdLineParser(final String host) {
       this.host = host;
     }
-    
+
     @Option(name = "--port", metaVar = "<port>",
         usage = "Port number where coordinator is listening.")
     private void setPortNumberFromCmdLineParser(final int port) {
       this.port = port;
     }
-    
+
     @Option(name = "--kgp-args", metaVar = "<kGenProg's args...>",
         usage = "kGenProg's arguments.")
     private void setKgpArgsFromCmdLineParser(final String kgpArgs) {
       this.kgpArgs = kgpArgs.split(" ");
     }
-    
+
   }
-  
+
 }
 

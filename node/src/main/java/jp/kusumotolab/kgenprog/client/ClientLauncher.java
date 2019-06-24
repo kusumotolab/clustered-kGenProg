@@ -45,12 +45,14 @@ public class ClientLauncher {
     final RouletteStatementSelection rouletteStatementSelection =
         new RouletteStatementSelection(random);
     final Mutation mutation = new RandomMutation(config.getMutationGeneratingCount(), random,
-        rouletteStatementSelection, config.getScope());
+        rouletteStatementSelection, config.getScope(), config.getNeedHistoricalElement());
     final Crossover crossover = new RandomCrossover(random, new FirstVariantRandomSelection(random),
-        new SecondVariantRandomSelection(random), config.getCrossoverGeneratingCount());
+        new SecondVariantRandomSelection(random), config.getCrossoverGeneratingCount(),
+        config.getNeedHistoricalElement());
     final SourceCodeGeneration sourceCodeGeneration = new DefaultSourceCodeGeneration();
     final SourceCodeValidation sourceCodeValidation = new DefaultCodeValidation();
-    final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount());
+    final VariantSelection variantSelection = new DefaultVariantSelection(config.getHeadcount(),
+        random);
     final TestExecutor testExecutor =
         new RemoteTestExecutor(config, clientConfig.getHost(), clientConfig.getPort());
     final PatchGenerator patchGenerator = new PatchGenerator();
