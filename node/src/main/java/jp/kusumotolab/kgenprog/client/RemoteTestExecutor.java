@@ -168,20 +168,6 @@ public class RemoteTestExecutor implements TestExecutor {
   }
 
   private static <T> Single<T> toSingle(final ListenableFuture<T> listenableFuture) {
-    return Single.create(subscriber -> {
-      Futures.addCallback(listenableFuture, new FutureCallback<T>() {
-
-        @Override
-        public void onSuccess(final T result) {
-          subscriber.onSuccess(result);
-        }
-
-        @Override
-        public void onFailure(final Throwable t) {
-          subscriber.onError(t);
-        }
-
-      }, MoreExecutors.directExecutor());
-    });
+    return Single.fromFuture(listenableFuture);
   }
 }
